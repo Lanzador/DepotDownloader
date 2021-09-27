@@ -3,10 +3,14 @@ Lanzador's fork
 
 I added some edits to the original fork. Here's what I changed:
 Edit #1
+
  * Added the `-apptoken` parameter that lets you specify an app token for apps that need one.
+
 Edit #2
+
  * Fixed a mistake which caused a crash if no app token was given.
  * Improved `-manifest-only` by copying code from version 2.4.4 of the original DepotDownloader. (Not included in this repo for now because I fucked up)
+
 I'm planning to do another edit soon.
 
 DepotDownloader fork
