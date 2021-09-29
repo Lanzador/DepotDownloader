@@ -741,18 +741,45 @@ namespace DepotDownloader
 
                 if ( Config.DownloadManifestOnly )
                 {
-                    StringBuilder manifestBuilder = new StringBuilder();
-                    string txtManifest = Path.Combine( depot.installDir, string.Format( "manifest_{0}.txt", depot.id ) );
+                    var txtManifest = Path.Combine(depot.installDir, $"manifest_{depot.id}_{depot.manifestId}.txt");
 
-                    foreach ( var file in newProtoManifest.Files )
+                    using (var sw = new StreamWriter(txtManifest))
                     {
-                        if ( file.Flags.HasFlag( EDepotFileFlag.Directory ) )
-                            continue;
+                        sw.WriteLine($"Content Manifest for Depot {depot.id}");
+                        sw.WriteLine();
+                        sw.WriteLine($"Manifest ID / date     : {depot.manifestId} / {newProtoManifest.CreationTime}");
 
-                        manifestBuilder.Append( string.Format( "{0}\n", file.FileName ) );
+                        int numFiles = 0, numChunks = 0;
+                        ulong uncompressedSize = 0, compressedSize = 0;
+
+                        foreach (var file in newProtoManifest.Files)
+                        {
+                            if (file.Flags.HasFlag(EDepotFileFlag.Directory))
+                                continue;
+
+                            numFiles++;
+                            numChunks += file.Chunks.Count;
+
+                            foreach (var chunk in file.Chunks)
+                            {
+                                uncompressedSize += chunk.UncompressedLength;
+                                compressedSize += chunk.CompressedLength;
+                            }
+                        }
+
+                        sw.WriteLine($"Total number of files  : {numFiles}");
+                        sw.WriteLine($"Total number of chunks : {numChunks}");
+                        sw.WriteLine($"Total bytes on disk    : {uncompressedSize}");
+                        sw.WriteLine($"Total bytes compressed : {compressedSize}");
+                        sw.WriteLine();
+                        sw.WriteLine("          Size Chunks File SHA                                 Flags Name");
+
+                        foreach (var file in newProtoManifest.Files)
+                        {
+                            var sha1Hash = BitConverter.ToString(file.FileHash).Replace("-", "");
+                            sw.WriteLine($"{file.TotalSize,14} {file.Chunks.Count,6} {sha1Hash} {file.Flags,5:D} {file.FileName}");
+                        }
                     }
-
-                    File.WriteAllText( txtManifest, manifestBuilder.ToString() );
                     continue;
                 }
 

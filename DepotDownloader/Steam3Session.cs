@@ -175,7 +175,7 @@ namespace DepotDownloader
                 {
                     this.AppTokens.Add( token_dict.Key, token_dict.Value );
                 }
-                if ( AppTokenParameter != null & AppTokenParameter != 0)
+                if ( AppTokenParameter != null & AppTokenParameter != 0 )
                 {
                     this.AppTokens.Add( appId, AppTokenParameter );
                 }
