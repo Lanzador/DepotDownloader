@@ -14,6 +14,8 @@ Edit #2
 
 ~~I'm planning to do another edit soon.~~ Okay, maybe not, considering that this will stop working soon.
 
+Oh, also, there's a compiled release here.
+
 DepotDownloader fork
 ===============
 
