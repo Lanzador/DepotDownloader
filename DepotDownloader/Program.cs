@@ -33,6 +33,8 @@ namespace DepotDownloader
 
             ContentDownloader.Config.DownloadManifestOnly = HasParameter( args, "-manifest-only" );
 
+            string ConvertManifest = GetParameter<string>( args, "-convert-manifest" )
+
             int cellId = GetParameter<int>( args, "-cellid", -1 );
             if ( cellId == -1 )
             {
@@ -99,6 +101,40 @@ namespace DepotDownloader
             }
 
             ContentDownloader.Config.InstallDirectory = GetParameter<string>( args, "-dir" );
+            
+            if ( ConvertManifest != null )
+            {
+                if File.Exists(ContentDownloader.Config.InstallDirectory)
+                {
+                    string[] TextToConvert = File.ReadAllLines(ConvertManifest);
+                    ProtoManifest ConvertedManifest = new ProtoManifest;
+                    ProtoManifest.ID = TextToConvert[3].Substring(25, 19);
+                    if (DateTime.TryParseExact(TextToConvert[3].Substrng(51), "MMM dd hh:mm:ss yyyy", null, DateTimeStyles.None, out DateTime parsedDate));
+                    {
+                        ProtoManifest.CreationTime = parsedDate;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Failed to read manifest creation time.");
+                        ProtoManifest.CreationTime = new DateTime();
+                    }
+                    for (int fi = 14; fi < TextToConvert.Length - 13; fi++)
+                    {
+                        for (int fl = 1; fl < 10; fl++)
+                        {
+                            if (TextToConvert[fi].Substring(fl, 1) != " ")
+                            {
+                                ConvertManifestFlags = ConvertManifestFlags + (512 / Math.Pow(2, fl))
+                            }
+                        }
+
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Given convert-manifest file does not exist.");
+                }
+            }
 
             ContentDownloader.Config.VerifyAll = HasParameter( args, "-verify-all" ) || HasParameter( args, "-verify_all" ) || HasParameter( args, "-validate" );
             ContentDownloader.Config.MaxServers = GetParameter<int>( args, "-max-servers", 20 );
