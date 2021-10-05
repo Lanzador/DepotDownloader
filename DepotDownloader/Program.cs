@@ -110,8 +110,8 @@ namespace DepotDownloader
                 {
                     string[] TextToConvert = File.ReadAllLines(ConvertManifest);
                     ProtoManifest ConvertedManifest = new ProtoManifest();
-                    ConvertedManifest.ID = ulong.Parse(TextToConvert[3].Substring(25, 19));
-                    if (DateTime.TryParseExact(TextToConvert[3].Substring(51), "MMM dd hh:mm:ss yyyy", null, DateTimeStyles.None, out DateTime parsedDate))
+                    ConvertedManifest.ID = ulong.Parse(TextToConvert[2].Substring(25, 19));
+                    if (DateTime.TryParseExact(TextToConvert[2].Substring(51), "MMM dd hh:mm:ss yyyy", null, DateTimeStyles.None, out DateTime parsedDate))
                     {
                         ConvertedManifest.CreationTime = parsedDate;
                     }
@@ -121,12 +121,12 @@ namespace DepotDownloader
                         ConvertedManifest.CreationTime = new DateTime();
                     }
                     string ConvertManifestMode = "F";
-                    for (int l = 12; l < TextToConvert.Length; l++)
+                    for (int l = 10; l < TextToConvert.Length - 1; l++)
                     {
                         if (ConvertManifestMode == "F")
                         {
                             ConvertedManifest.Files.Add(new ProtoManifest.FileData());
-                            ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
+                            ConvertedManifest.Files[ConvertedManifest.Files.Length - 1] = ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
                         }
                     }
                 }
