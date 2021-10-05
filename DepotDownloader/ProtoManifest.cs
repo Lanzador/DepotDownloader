@@ -14,6 +14,8 @@ namespace DepotDownloader
         public ProtoManifest()
         {
             Files = new List<FileData>();
+            ID = 0
+            CreationTime = new DateTime();
         }
 
         public ProtoManifest(DepotManifest sourceManifest, ulong id) : this()
