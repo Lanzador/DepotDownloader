@@ -42,31 +42,31 @@ namespace DepotDownloader
             }
 
             [ProtoMember(1)]
-            public string FileName { get; internal set; }
+            public string FileName { get; set; }
 
             /// <summary>
             /// Gets the chunks that this file is composed of.
             /// </summary>
             [ProtoMember(2)]
-            public List<ChunkData> Chunks { get; public set; }
+            public List<ChunkData> Chunks { get; set; }
 
             /// <summary>
             /// Gets the file flags
             /// </summary>
             [ProtoMember(3)]
-            public EDepotFileFlag Flags { get; public set; }
+            public EDepotFileFlag Flags { get; set; }
 
             /// <summary>
             /// Gets the total size of this file.
             /// </summary>
             [ProtoMember(4)]
-            public ulong TotalSize { get; public set; }
+            public ulong TotalSize { get; set; }
 
             /// <summary>
             /// Gets the hash of this file.
             /// </summary>
             [ProtoMember(5)]
-            public byte[] FileHash { get; public set; }
+            public byte[] FileHash { get; set; }
         }
 
         [ProtoContract(SkipConstructor = true)]
@@ -85,41 +85,41 @@ namespace DepotDownloader
             /// Gets the SHA-1 hash chunk id.
             /// </summary>
             [ProtoMember(1)]
-            public byte[] ChunkID { get; public set; }
+            public byte[] ChunkID { get; set; }
 
             /// <summary>
             /// Gets the expected Adler32 checksum of this chunk.
             /// </summary>
             [ProtoMember(2)]
-            public byte[] Checksum { get; public set; }
+            public byte[] Checksum { get; set; }
 
             /// <summary>
             /// Gets the chunk offset.
             /// </summary>
             [ProtoMember(3)]
-            public ulong Offset { get; public set; }
+            public ulong Offset { get; set; }
 
             /// <summary>
             /// Gets the compressed length of this chunk.
             /// </summary>
             [ProtoMember(4)]
-            public uint CompressedLength { get; public set; }
+            public uint CompressedLength { get; set; }
 
             /// <summary>
             /// Gets the decompressed length of this chunk.
             /// </summary>
             [ProtoMember(5)]
-            public uint UncompressedLength { get; public set; }
+            public uint UncompressedLength { get; set; }
         }
 
         [ProtoMember(1)]
-        public List<FileData> Files { get; public set; }
+        public List<FileData> Files { get; set; }
 
         [ProtoMember(2)]
-        public ulong ID { get; public set; }
+        public ulong ID { get; set; }
         
         [ProtoMember(3)]
-        public DateTime CreationTime { get; public set; }
+        public DateTime CreationTime { get; set; }
 
         public static ProtoManifest LoadFromFile(string filename, out byte[] checksum)
         {
