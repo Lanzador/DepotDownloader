@@ -126,8 +126,8 @@ namespace DepotDownloader
                         if (ConvertManifestMode == "F")
                         {
                             ConvertedManifest.Files.Add(new ProtoManifest.FileData());
-                            ConvertedManifest.Files[ConvertedManifest.Files.Length - 1].TotalSize = ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
-                            ConvertedManifest.Files[ConvertedManifest.Files.Length - 1].Chunks = ulong.Parse(TextToConvert[l].Substring(15, 6).Replace(" ", string.Empty), System.Globalization.NumberStyles.HexNumber);
+                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].TotalSize = ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
+                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].Chunks = ulong.Parse(TextToConvert[l].Substring(15, 6).Replace(" ", string.Empty), System.Globalization.NumberStyles.HexNumber);
                         }
                     }
                 }
