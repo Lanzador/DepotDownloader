@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using SteamKit2;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Globalization;
 
 namespace DepotDownloader
 {
@@ -108,26 +109,24 @@ namespace DepotDownloader
                 {
                     string[] TextToConvert = File.ReadAllLines(ConvertManifest);
                     ProtoManifest ConvertedManifest = new ProtoManifest();
-                    ProtoManifest.ID = TextToConvert[3].Substring(25, 19);
-                    if (DateTime.TryParseExact(TextToConvert[3].Substring(51), "MMM dd hh:mm:ss yyyy", null, null, out DateTime parsedDate))
+                    ConvertedManifest.ID = TextToConvert[3].Substring(25, 19);
+                    if (DateTime.TryParseExact(TextToConvert[3].Substring(51), "MMM dd hh:mm:ss yyyy", null, DateTimeStyles.None, out DateTime parsedDate))
                     {
-                        ProtoManifest.CreationTime = parsedDate;
+                        ConvertedManifest.CreationTime = parsedDate;
                     }
                     else
                     {
                         Console.WriteLine("Failed to read manifest creation time.");
-                        ProtoManifest.CreationTime = new DateTime();
+                        ConvertedManifest.CreationTime = new DateTime();
                     }
-                    for (int fi = 14; fi < TextToConvert.Length - 13; fi++)
+                    string ConvertManifestMode = "F";
+                    for (int l = 12; l < TextToConvert.Length; l++)
                     {
-                        for (int fl = 1; fl < 10; fl++)
+                        if (ConvertManifestMode == "F")
                         {
-                            if (TextToConvert[fi].Substring(fl, 1) != " ")
-                            {
-                                ConvertManifestFlags = ConvertManifestFlags + (512 / Math.Pow(2, fl));
-                            }
+                            ConvertedManifest.Files.Add(new FileData());
+                            ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
                         }
-
                     }
                 }
                 else
