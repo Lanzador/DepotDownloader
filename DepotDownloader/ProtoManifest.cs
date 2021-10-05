@@ -27,7 +27,7 @@ namespace DepotDownloader
         public class FileData
         {
             // Proto ctor
-            private FileData()
+            public FileData()
             {
                 Chunks = new List<ChunkData>();
             }
