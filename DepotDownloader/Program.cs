@@ -125,7 +125,7 @@ namespace DepotDownloader
                     {
                         if (ConvertManifestMode == "F")
                         {
-                            ConvertedManifest.Files.Add(new FileData());
+                            ConvertedManifest.Files.Add(new ProtoManifest.FileData());
                             ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
                         }
                     }
