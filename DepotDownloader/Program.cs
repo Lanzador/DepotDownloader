@@ -5,8 +5,6 @@ using System.Text.RegularExpressions;
 using SteamKit2;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using System.Globalization;
-using ProtoBuf;
 
 namespace DepotDownloader
 {
@@ -34,8 +32,6 @@ namespace DepotDownloader
             ContentDownloader.Config.RememberPassword = HasParameter( args, "-remember-password" );
 
             ContentDownloader.Config.DownloadManifestOnly = HasParameter( args, "-manifest-only" );
-
-            string ConvertManifest = GetParameter<string>( args, "-convert-manifest" );
 
             int cellId = GetParameter<int>( args, "-cellid", -1 );
             if ( cellId == -1 )
@@ -103,39 +99,6 @@ namespace DepotDownloader
             }
 
             ContentDownloader.Config.InstallDirectory = GetParameter<string>( args, "-dir" );
-            
-            if ( ConvertManifest != null )
-            {
-                if (File.Exists(ContentDownloader.Config.InstallDirectory))
-                {
-                    string[] TextToConvert = File.ReadAllLines(ConvertManifest);
-                    ProtoManifest ConvertedManifest = new ProtoManifest();
-                    ConvertedManifest.ID = ulong.Parse(TextToConvert[2].Substring(25, 19));
-                    if (DateTime.TryParseExact(TextToConvert[2].Substring(51), "MMM dd hh:mm:ss yyyy", null, DateTimeStyles.None, out DateTime parsedDate))
-                    {
-                        ConvertedManifest.CreationTime = parsedDate;
-                    }
-                    else
-                    {
-                        Console.WriteLine("Failed to read manifest creation time.");
-                        ConvertedManifest.CreationTime = new DateTime();
-                    }
-                    string ConvertManifestMode = "F";
-                    for (int l = 10; l < TextToConvert.Length - 1; l++)
-                    {
-                        if (ConvertManifestMode == "F")
-                        {
-                            ConvertedManifest.Files.Add(new ProtoManifest.FileData());
-                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].TotalSize = ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
-                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].FileHash = StringToByteArrayFastest(TextToConvert[l].Substring(22, 40));
-                        }
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Given convert-manifest file does not exist.");
-                }
-            }
 
             ContentDownloader.Config.VerifyAll = HasParameter( args, "-verify-all" ) || HasParameter( args, "-verify_all" ) || HasParameter( args, "-validate" );
             ContentDownloader.Config.MaxServers = GetParameter<int>( args, "-max-servers", 20 );
@@ -344,31 +307,6 @@ namespace DepotDownloader
             Console.WriteLine( "\t-cellid <#>\t\t\t\t- the overridden CellID of the content server to download from." );
             Console.WriteLine( "\t-max-servers <#>\t\t- maximum number of content servers to use. (default: 8)." );
             Console.WriteLine( "\t-max-downloads <#>\t\t- maximum number of chunks to download concurrently. (default: 4)." );
-        }
-        public static byte[] StringToByteArrayFastest(string hex) {
-            if (hex.Length % 2 == 1)
-            {
-                throw new Exception("The binary key cannot have an odd number of digits");
-            }
-            
-            byte[] arr = new byte[hex.Length >> 1];
-
-            for (int i = 0; i < hex.Length >> 1; ++i)
-            {
-                arr[i] = (byte)((GetHexVal(hex[i << 1]) << 4) + (GetHexVal(hex[(i << 1) + 1])));
-            }
-
-            return arr;
-        }
-
-        public static int GetHexVal(char hex) {
-            int val = (int)hex;
-            //For uppercase A-F letters:
-            //return val - (val < 58 ? 48 : 55);
-            //For lowercase a-f letters:
-            //return val - (val < 58 ? 48 : 87);
-            //Or the two combined, but a bit slower:
-            return val - (val < 58 ? 48 : (val < 97 ? 55 : 87));
         }
     }
 }
