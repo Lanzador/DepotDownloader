@@ -110,7 +110,7 @@ namespace DepotDownloader
                 {
                     string[] TextToConvert = File.ReadAllLines(ConvertManifest);
                     ProtoManifest ConvertedManifest = new ProtoManifest();
-                    ConvertedManifest.ID = TextToConvert[3].Substring(25, 19);
+                    ConvertedManifest.ID = ulong.Parse(TextToConvert[3].Substring(25, 19));
                     if (DateTime.TryParseExact(TextToConvert[3].Substring(51), "MMM dd hh:mm:ss yyyy", null, DateTimeStyles.None, out DateTime parsedDate))
                     {
                         ConvertedManifest.CreationTime = parsedDate;
