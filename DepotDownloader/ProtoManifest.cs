@@ -11,7 +11,7 @@ namespace DepotDownloader
     class ProtoManifest
     {
         // Proto ctor
-        private ProtoManifest()
+        public ProtoManifest()
         {
             Files = new List<FileData>();
         }
