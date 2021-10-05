@@ -6,6 +6,7 @@ using SteamKit2;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Globalization;
+using ProtoBuf;
 
 namespace DepotDownloader
 {
