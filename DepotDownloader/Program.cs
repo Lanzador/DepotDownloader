@@ -127,7 +127,7 @@ namespace DepotDownloader
                         {
                             ConvertedManifest.Files.Add(new ProtoManifest.FileData());
                             ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].TotalSize = ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
-                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].Chunks = ulong.Parse(TextToConvert[l].Substring(15, 6).Replace(" ", string.Empty), System.Globalization.NumberStyles.HexNumber);
+                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].FileHash = StringToByteArrayFastest(TextToConvert[l].Substring(22, 40))
                         }
                     }
                 }
@@ -344,6 +344,31 @@ namespace DepotDownloader
             Console.WriteLine( "\t-cellid <#>\t\t\t\t- the overridden CellID of the content server to download from." );
             Console.WriteLine( "\t-max-servers <#>\t\t- maximum number of content servers to use. (default: 8)." );
             Console.WriteLine( "\t-max-downloads <#>\t\t- maximum number of chunks to download concurrently. (default: 4)." );
+        }
+        public static byte[] StringToByteArrayFastest(string hex) {
+            if (hex.Length % 2 == 1)
+            {
+                throw new Exception("The binary key cannot have an odd number of digits");
+            }
+            
+            byte[] arr = new byte[hex.Length >> 1];
+
+            for (int i = 0; i < hex.Length >> 1; ++i)
+            {
+                arr[i] = (byte)((GetHexVal(hex[i << 1]) << 4) + (GetHexVal(hex[(i << 1) + 1])));
+            }
+
+            return arr;
+        }
+
+        public static int GetHexVal(char hex) {
+            int val = (int)hex;
+            //For uppercase A-F letters:
+            //return val - (val < 58 ? 48 : 55);
+            //For lowercase a-f letters:
+            //return val - (val < 58 ? 48 : 87);
+            //Or the two combined, but a bit slower:
+            return val - (val < 58 ? 48 : (val < 97 ? 55 : 87));
         }
     }
 }
