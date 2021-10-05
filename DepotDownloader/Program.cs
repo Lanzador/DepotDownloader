@@ -127,7 +127,7 @@ namespace DepotDownloader
                         {
                             ConvertedManifest.Files.Add(new ProtoManifest.FileData());
                             ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].TotalSize = ulong.Parse(TextToConvert[l].Substring(0, 14).Replace(" ", string.Empty), NumberStyles.AllowThousands, new CultureInfo("en-US"));
-                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].FileHash = StringToByteArrayFastest(TextToConvert[l].Substring(22, 40))
+                            ConvertedManifest.Files[ConvertedManifest.Files.Count - 1].FileHash = StringToByteArrayFastest(TextToConvert[l].Substring(22, 40));
                         }
                     }
                 }
