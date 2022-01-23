@@ -12,9 +12,13 @@ Edit #2
  * Fixed a mistake which caused a crash if no app token was given.
  * Improved `-manifest-only` by copying code from version 2.4.4 of the original DepotDownloader.
 
-~~I'm planning to do another edit soon.~~ Okay, maybe not, considering that this will stop working soon.
+Unnumbered edits (I forgot to update the readme...)
+ * You can load a manifest - encrypted or decrypted - from a file by putting the file in the "manifests" folder and naming it "<DepotID>_<ManifestID>.manifest" or "<DepotID>.manifest".
+ * Fixed the tool not working because Steam removed CDN tokens.
+ * When downloading a manifest, it's saved to "manifests\downloaded".
 
 Oh, also, there's a compiled release here.
+
 
 DepotDownloader fork
 ===============
