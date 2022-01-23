@@ -181,7 +181,7 @@ namespace DepotDownloader
                 if (appTokens.AppTokensDenied.Contains(appId))
                 {
                     Console.WriteLine("Insufficient privileges to get access token for app {0}", appId);
-                    if ( AppTokenParameter != null )
+                    if ( AppTokenParameter != null & AppTokenParameter != 0 )
                     {
                         Console.WriteLine( "Will try to use app token given in the parameter.");
                     }
