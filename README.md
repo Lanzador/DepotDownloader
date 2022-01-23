@@ -17,8 +17,11 @@ Unnumbered edits (I forgot to update the readme...)
  * Fixed the tool not working because Steam removed CDN tokens.
  * When downloading a manifest, it's saved to "manifests\downloaded".
  * Merged this outdated fork's features with a new version of DD (Also, right now when copying the result from Lanzador/merge-dd I had to add a line to the csproj to fix some weird error). The pre-merge version can be found in the pre-merge branch.
+ * Finally fixed the fact it says "Will try to use app token given in the parameter." even if none is given.
 
 Oh, also, there's a compiled release here.
+    
+The no-app-token branch is a version that lets you download depots without having the app token - I took the code from @IntriguingTiles. If using this, you must manually provide a manifest ID.
 
 
 DepotDownloader fork
