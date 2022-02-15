@@ -729,14 +729,15 @@ namespace DepotDownloader
             int depotsProcessed = 0;
             foreach (var depot in depots)
             {
+                DepotFilesData depotFileData = new DepotFilesData();
                 if (deltaManifestIds.Count > 0)
                 {
-                    var depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, deltaManifestIds[depotsProcessed]);
+                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, deltaManifestIds[depotsProcessed]);
                     depotsProcessed += 1;
                 }
                 else
                 {
-                    var depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, INVALID_MANIFEST_ID);
+                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, INVALID_MANIFEST_ID);
                 }
 
                 if (depotFileData != null)
@@ -781,6 +782,7 @@ namespace DepotDownloader
 
             ProtoManifest oldProtoManifest = null;
             ProtoManifest newProtoManifest = null;
+            ProtoManifest deltaProtoManifest = null;
             var configDir = Path.Combine(depot.installDir, CONFIG_DIR);
 
             var lastManifestId = INVALID_MANIFEST_ID;
@@ -972,7 +974,7 @@ namespace DepotDownloader
                             connection = cdnPool.GetConnection(cts.Token);
 
                             DebugLog.WriteLine("ContentDownloader", "Downloading manifest {0} from {1} with {2}", deltaManifestId, connection, cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
-                            depotManifest = await cdnPool.CDNClient.DownloadManifestAsync(depot.id, deltaManifestId,
+                            depotManifestD = await cdnPool.CDNClient.DownloadManifestAsync(depot.id, deltaManifestId,
                                 connection, null, depot.depotKey, proxyServer: cdnPool.ProxyServer).ConfigureAwait(false);
 
                             cdnPool.ReturnConnection(connection);
