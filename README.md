@@ -20,7 +20,7 @@ Unnumbered edits (I forgot to update the readme...)
  * Finally fixed the fact it says "Will try to use app token given in the parameter." even if none is given.
 
 Edit #4
- * `-delta-manifest` can be used to provide a custom delta manifest instead of whatever is stored in your config file. Can accept multiple values, just like `-manifest`.
+ * `-delta-manifest` can now be used to provide a custom delta manifest instead of whatever is stored in your config file. It can accept multiple values, just like `-manifest`.
 
 Oh, also, there's a compiled release here.
     
