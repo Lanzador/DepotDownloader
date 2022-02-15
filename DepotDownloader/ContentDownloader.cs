@@ -1070,7 +1070,7 @@ namespace DepotDownloader
 
             if (deltaManifestId != INVALID_MANIFEST_ID)
             {
-                oldProtoManifest = deltaProtoManifest'
+                oldProtoManifest = deltaProtoManifest;
             }
             return new DepotFilesData
             {
