@@ -1031,10 +1031,15 @@ namespace DepotDownloader
                 }
             }
             newProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
-            deltaProtoManifest.Files.Sort((xd, yd) => string.Compare(xd.FileName, yd.FileName, StringComparison.Ordinal));
 
             Console.WriteLine("Manifest {0} ({1})", depot.manifestId, newProtoManifest.CreationTime);
-            Console.WriteLine("Delta Manifest {0} ({1})", deltaManifestId, newProtoManifest.CreationTime);
+            
+            if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                deltaProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
+                
+                Console.WriteLine("Delta Manifest {0} ({1})", deltaManifestId, deltaProtoManifest.CreationTime);
+            }
 
             if (Config.DownloadManifestOnly)
             {
