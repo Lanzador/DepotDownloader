@@ -135,7 +135,13 @@ namespace DepotDownloader
                 {
                     try
                     {
-                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile).ConfigureAwait(false);
+                        var deltaManifestId = GetParameterList<ulong>(args, "-delta-manifest");
+                        if (deltaManifestId.Count > 1)
+                        {
+                            Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
+                            return 1;
+                        }
+                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile, deltaManifestId).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -170,7 +176,13 @@ namespace DepotDownloader
                 {
                     try
                     {
-                        await ContentDownloader.DownloadUGCAsync(appId, ugcId).ConfigureAwait(false);
+                        var deltaManifestId = GetParameterList<ulong>(args, "-delta-manifest");
+                        if (deltaManifestId.Count > 1)
+                        {
+                            Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
+                            return 1;
+                        }
+                        await ContentDownloader.DownloadUGCAsync(appId, ugcId, deltaManifestId).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -231,6 +243,12 @@ namespace DepotDownloader
 
                 var depotIdList = GetParameterList<uint>(args, "-depot");
                 var manifestIdList = GetParameterList<ulong>(args, "-manifest");
+                var deltaManifestIdList = GetParameterList<ulong>(args, "-delta-manifest");
+                if (deltaManifestIdList.Count > 0 && depotIdList.Count != deltaManifestIdList.Count)
+                {
+                    Console.WriteLine("Error: -delta-manifest requires one id for every -depot specified");
+                    return 1;
+                }
                 if (manifestIdList.Count > 0)
                 {
                     if (depotIdList.Count != manifestIdList.Count)
@@ -251,7 +269,7 @@ namespace DepotDownloader
                 {
                     try
                     {
-                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, AppTokenParameter).ConfigureAwait(false);
+                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, AppTokenParameter, deltaManifestIdList).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException

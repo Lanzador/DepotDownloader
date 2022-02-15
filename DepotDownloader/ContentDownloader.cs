@@ -385,7 +385,7 @@ namespace DepotDownloader
             steam3.Disconnect();
         }
 
-        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId)
+        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId, List<ulong> deltaManifestId)
         {
             var details = steam3.GetPublishedFileDetails(appId, publishedFileId);
 
@@ -395,7 +395,7 @@ namespace DepotDownloader
             }
             else if (details?.hcontent_file > 0)
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true, 0);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true, 0, deltaManifestId);
             }
             else
             {
@@ -403,7 +403,7 @@ namespace DepotDownloader
             }
         }
 
-        public static async Task DownloadUGCAsync(uint appId, ulong ugcId)
+        public static async Task DownloadUGCAsync(uint appId, ulong ugcId, List<ulong> deltaManifestId)
         {
             SteamCloud.UGCDetailsCallback details = null;
 
@@ -422,7 +422,7 @@ namespace DepotDownloader
             }
             else
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, ugcId) }, DEFAULT_BRANCH, null, null, null, false, true, 0);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, ugcId) }, DEFAULT_BRANCH, null, null, null, false, true, 0, deltaManifestId);
             }
         }
 
@@ -458,7 +458,7 @@ namespace DepotDownloader
             File.Move(fileStagingPath, fileFinalPath);
         }
 
-        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc, ulong AppTokenParameter)
+        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc, ulong AppTokenParameter, List<ulong> deltaManifestIds)
         {
             cdnPool = new CDNClientPool(steam3, appId);
 
@@ -595,7 +595,7 @@ namespace DepotDownloader
 
             try
             {
-                await DownloadSteam3Async(appId, infos).ConfigureAwait(false);
+                await DownloadSteam3Async(appId, infos, deltaManifestIds).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -716,7 +716,7 @@ namespace DepotDownloader
             public ulong DepotBytesUncompressed;
         }
 
-        private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots)
+        private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, List<ulong> deltaManifestIds)
         {
             var cts = new CancellationTokenSource();
             cdnPool.ExhaustedToken = cts;
@@ -726,9 +726,19 @@ namespace DepotDownloader
             var allFileNamesAllDepots = new HashSet<String>();
 
             // First, fetch all the manifests for each depot (including previous manifests) and perform the initial setup
+            int depotsProcessed = 0;
             foreach (var depot in depots)
             {
-                var depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot);
+                DepotFilesData depotFileData = new DepotFilesData();
+                if (deltaManifestIds.Count > 0)
+                {
+                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, deltaManifestIds[depotsProcessed]);
+                    depotsProcessed += 1;
+                }
+                else
+                {
+                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, INVALID_MANIFEST_ID);
+                }
 
                 if (depotFileData != null)
                 {
@@ -764,7 +774,7 @@ namespace DepotDownloader
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
-            uint appId, DepotDownloadInfo depot)
+            uint appId, DepotDownloadInfo depot, ulong deltaManifestId)
         {
             var depotCounter = new DepotDownloadCounter();
 
@@ -772,6 +782,7 @@ namespace DepotDownloader
 
             ProtoManifest oldProtoManifest = null;
             ProtoManifest newProtoManifest = null;
+            ProtoManifest deltaProtoManifest = null;
             var configDir = Path.Combine(depot.installDir, CONFIG_DIR);
 
             var lastManifestId = INVALID_MANIFEST_ID;
@@ -917,10 +928,118 @@ namespace DepotDownloader
                     Console.WriteLine(" Done!");
                 }
             }
+            if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                var deltaManifestFileName = Path.Combine(configDir, string.Format("{0}_{1}.bin", depot.id, deltaManifestId));
+                if (deltaManifestFileName != null)
+                {
+                    byte[] expectedChecksumD, currentChecksumD;
 
+                    try
+                    {
+                        expectedChecksumD = File.ReadAllBytes(deltaManifestFileName + ".sha");
+                    }
+                    catch (IOException)
+                    {
+                        expectedChecksumD = null;
+                    }
+
+                    deltaProtoManifest = ProtoManifest.LoadFromFile(deltaManifestFileName, out currentChecksumD);
+
+                    if (deltaProtoManifest != null && (expectedChecksumD == null || !expectedChecksumD.SequenceEqual(currentChecksumD)))
+                    {
+                        Console.WriteLine("Manifest {0} on disk did not match the expected checksum.", deltaManifestId);
+                        deltaProtoManifest = null;
+                    }
+                }
+
+                if (deltaProtoManifest != null)
+                {
+                    Console.WriteLine("Already have manifest {0} for depot {1}.", deltaManifestId, depot.id);
+                }
+                else
+                {
+                    Console.Write("Downloading delta manifest...");
+
+                    DepotManifest depotManifestD = null;
+
+                    do
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
+
+                        CDNClient.Server connection = null;
+
+                        try
+                        {
+                            connection = cdnPool.GetConnection(cts.Token);
+
+                            DebugLog.WriteLine("ContentDownloader", "Downloading manifest {0} from {1} with {2}", deltaManifestId, connection, cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
+                            depotManifestD = await cdnPool.CDNClient.DownloadManifestAsync(depot.id, deltaManifestId,
+                                connection, null, depot.depotKey, proxyServer: cdnPool.ProxyServer).ConfigureAwait(false);
+
+                            cdnPool.ReturnConnection(connection);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Console.WriteLine("Connection timeout downloading depot manifest {0} {1}", depot.id, deltaManifestId);
+                        }
+                        catch (SteamKitWebRequestException e)
+                        {
+                            cdnPool.ReturnBrokenConnection(connection);
+
+                            if (e.StatusCode == HttpStatusCode.Unauthorized || e.StatusCode == HttpStatusCode.Forbidden)
+                            {
+                                Console.WriteLine("Encountered 401 for depot manifest {0} {1}. Aborting.", depot.id, deltaManifestId);
+                                break;
+                            }
+
+                            if (e.StatusCode == HttpStatusCode.NotFound)
+                            {
+                                Console.WriteLine("Encountered 404 for depot manifest {0} {1}. Aborting.", depot.id, deltaManifestId);
+                                break;
+                            }
+
+                            Console.WriteLine("Encountered error downloading depot manifest {0} {1}: {2}", depot.id, deltaManifestId, e.StatusCode);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                        catch (Exception e)
+                        {
+                            cdnPool.ReturnBrokenConnection(connection);
+                            Console.WriteLine("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, deltaManifestId, e.Message);
+                        }
+                    } while (depotManifestD == null);
+
+                    if (depotManifestD == null)
+                    {
+                        Console.WriteLine("\nUnable to download manifest {0} for depot {1}", deltaManifestId, depot.id);
+                        cts.Cancel();
+                    }
+
+                    // Throw the cancellation exception if requested so that this task is marked failed
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    byte[] checksumD;
+
+                    deltaProtoManifest = new ProtoManifest(depotManifestD, deltaManifestId);
+                    deltaProtoManifest.SaveToFile(deltaManifestFileName, out checksumD);
+                    File.WriteAllBytes(deltaManifestFileName + ".sha", checksumD);
+
+                    Console.WriteLine(" Done!");
+                }
+            }
             newProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
 
             Console.WriteLine("Manifest {0} ({1})", depot.manifestId, newProtoManifest.CreationTime);
+            
+            if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                deltaProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
+                
+                Console.WriteLine("Delta Manifest {0} ({1})", deltaManifestId, deltaProtoManifest.CreationTime);
+            }
 
             if (Config.DownloadManifestOnly)
             {
@@ -956,6 +1075,10 @@ namespace DepotDownloader
                 }
             });
 
+            if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                oldProtoManifest = deltaProtoManifest;
+            }
             return new DepotFilesData
             {
                 depotDownloadInfo = depot,
