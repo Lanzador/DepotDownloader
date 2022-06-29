@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using SteamKit2;
+using SteamKit2.CDN;
 
 namespace DepotDownloader
 {
@@ -29,37 +29,44 @@ namespace DepotDownloader
         private static Steam3Session.Credentials steam3Credentials;
         private static CDNClientPool cdnPool;
 
-        private static string DEFAULT_DOWNLOAD_DIR = "depots";
+        private const string DEFAULT_DOWNLOAD_DIR = "depots";
         private const string CONFIG_DIR = ".DepotDownloader";
         private static readonly string STAGING_DIR = Path.Combine(CONFIG_DIR, "staging");
 
         private sealed class DepotDownloadInfo
         {
             public uint id { get; private set; }
+            public uint appId { get; private set; }
+            public ulong manifestId { get; private set; }
+            public string branch { get; private set; }
+
             public string installDir { get; private set; }
             public string contentName { get; private set; }
 
-            public ulong manifestId { get; private set; }
-            public byte[] depotKey;
+            public byte[] depotKey { get; private set; }
 
-            public DepotDownloadInfo(uint depotid, ulong manifestId, string installDir, string contentName)
+            public DepotDownloadInfo(
+                uint depotid, uint appId, ulong manifestId, string branch,
+                string installDir, string contentName,
+                byte[] depotKey)
             {
                 this.id = depotid;
+                this.appId = appId;
                 this.manifestId = manifestId;
+                this.branch = branch;
                 this.installDir = installDir;
                 this.contentName = contentName;
+                this.depotKey = depotKey;
             }
         }
 
-        static bool CreateDirectories(uint appId, uint depotId, uint depotVersion, string contentName, out string installDir)
+        static bool CreateDirectories(uint depotId, uint depotVersion, string contentName, out string installDir)
         {
             installDir = null;
             try
             {
                 if (string.IsNullOrWhiteSpace(Config.InstallDirectory))
                 {
-                    DEFAULT_DOWNLOAD_DIR = $"depots";
-                    
                     Directory.CreateDirectory(DEFAULT_DOWNLOAD_DIR);
 
                     char[] arr = contentName.ToCharArray();
@@ -211,7 +218,21 @@ namespace DepotDownloader
             return uint.Parse(buildid.Value);
         }
 
-        static ulong GetSteam3DepotManifest(uint depotId, uint appId, string branch, ulong AppTokenParameter)
+        static uint GetSteam3DepotProxyAppId(uint depotId, uint appId)
+        {
+            var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
+            var depotChild = depots[depotId.ToString()];
+
+            if (depotChild == KeyValue.Invalid)
+                return INVALID_APP_ID;
+
+            if (depotChild["depotfromapp"] == KeyValue.Invalid)
+                return INVALID_APP_ID;
+
+            return depotChild["depotfromapp"].AsUnsignedInteger();
+        }
+
+        static ulong GetSteam3DepotManifest(uint depotId, uint appId, string branch)
         {
             var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
             var depotChild = depots[depotId.ToString()];
@@ -233,9 +254,9 @@ namespace DepotDownloader
                     return INVALID_MANIFEST_ID;
                 }
 
-                steam3.RequestAppInfo(otherAppId, AppTokenParameter);
+                steam3.RequestAppInfo(otherAppId);
 
-                return GetSteam3DepotManifest(depotId, otherAppId, branch, AppTokenParameter);
+                return GetSteam3DepotManifest(depotId, otherAppId, branch);
             }
 
             var manifests = depotChild["manifests"];
@@ -252,7 +273,7 @@ namespace DepotDownloader
                 if (node_encrypted != KeyValue.Invalid)
                 {
                     var password = Config.BetaPassword;
-                    if (password == null)
+                    while (string.IsNullOrEmpty(password))
                     {
                         Console.Write("Please enter the password for branch {0}: ", branch);
                         Config.BetaPassword = password = Console.ReadLine();
@@ -385,7 +406,7 @@ namespace DepotDownloader
             steam3.Disconnect();
         }
 
-        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId, List<ulong> deltaManifestId)
+        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId)
         {
             var details = steam3.GetPublishedFileDetails(appId, publishedFileId);
 
@@ -395,7 +416,7 @@ namespace DepotDownloader
             }
             else if (details?.hcontent_file > 0)
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true, 0, deltaManifestId);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true);
             }
             else
             {
@@ -403,7 +424,7 @@ namespace DepotDownloader
             }
         }
 
-        public static async Task DownloadUGCAsync(uint appId, ulong ugcId, List<ulong> deltaManifestId)
+        public static async Task DownloadUGCAsync(uint appId, ulong ugcId)
         {
             SteamCloud.UGCDetailsCallback details = null;
 
@@ -422,14 +443,14 @@ namespace DepotDownloader
             }
             else
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, ugcId) }, DEFAULT_BRANCH, null, null, null, false, true, 0, deltaManifestId);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, ugcId) }, DEFAULT_BRANCH, null, null, null, false, true);
             }
         }
 
         private static async Task DownloadWebFile(uint appId, string fileName, string url)
         {
             string installDir;
-            if (!CreateDirectories(appId, appId, 0, fileName, out installDir))
+            if (!CreateDirectories(appId, 0, out installDir))
             {
                 Console.WriteLine("Error: Unable to create install directories!");
                 return;
@@ -458,7 +479,7 @@ namespace DepotDownloader
             File.Move(fileStagingPath, fileFinalPath);
         }
 
-        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc, ulong AppTokenParameter, List<ulong> deltaManifestIds)
+        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc)
         {
             cdnPool = new CDNClientPool(steam3, appId);
 
@@ -473,7 +494,7 @@ namespace DepotDownloader
             DepotConfigStore.LoadFromFile(Path.Combine(configPath, CONFIG_DIR, "depot.config"));
 
             if (steam3 != null)
-                steam3.RequestAppInfo(appId, AppTokenParameter);
+                steam3.RequestAppInfo(appId);
 
             /*if (!AccountHasAccess(appId))
             {
@@ -586,7 +607,7 @@ namespace DepotDownloader
 
             foreach (var depotManifest in depotManifestIds)
             {
-                var info = GetDepotInfo(depotManifest.Item1, appId, depotManifest.Item2, branch, AppTokenParameter);
+                var info = GetDepotInfo(depotManifest.Item1, appId, depotManifest.Item2, branch);
                 if (info != null)
                 {
                     infos.Add(info);
@@ -595,7 +616,7 @@ namespace DepotDownloader
 
             try
             {
-                await DownloadSteam3Async(appId, infos, deltaManifestIds).ConfigureAwait(false);
+                await DownloadSteam3Async(appId, infos).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -604,10 +625,10 @@ namespace DepotDownloader
             }
         }
 
-        static DepotDownloadInfo GetDepotInfo(uint depotId, uint appId, ulong manifestId, string branch, ulong AppTokenParameter)
+        static DepotDownloadInfo GetDepotInfo(uint depotId, uint appId, ulong manifestId, string branch)
         {
             if (steam3 != null && appId != INVALID_APP_ID)
-                steam3.RequestAppInfo(appId, AppTokenParameter);
+                steam3.RequestAppInfo(appId);
 
             var contentName = GetAppOrDepotName(depotId, appId);
 
@@ -620,12 +641,12 @@ namespace DepotDownloader
 
             if (manifestId == INVALID_MANIFEST_ID)
             {
-                manifestId = GetSteam3DepotManifest(depotId, appId, branch, AppTokenParameter);
+                manifestId = GetSteam3DepotManifest(depotId, appId, branch);
                 if (manifestId == INVALID_MANIFEST_ID && branch != "public")
                 {
                     Console.WriteLine("Warning: Depot {0} does not have branch named \"{1}\". Trying public branch.", depotId, branch);
                     branch = "public";
-                    manifestId = GetSteam3DepotManifest(depotId, appId, branch, AppTokenParameter);
+                    manifestId = GetSteam3DepotManifest(depotId, appId, branch);
                 }
 
                 if (manifestId == INVALID_MANIFEST_ID)
@@ -635,18 +656,23 @@ namespace DepotDownloader
                 }
             }
 
-            var uVersion = GetSteam3AppBuildNumber(appId, branch);
-
-            string installDir;
-            if (!CreateDirectories( appId, depotId, uVersion, contentName, out installDir))
-            {
-                Console.WriteLine("Error: Unable to create install directories!");
-                return null;
-            }
+            // For depots that are proxied through depotfromapp, we still need to resolve the proxy app id
+            var containingAppId = appId;
+            var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
+            if (proxyAppId != INVALID_APP_ID) containingAppId = proxyAppId;
 
             if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
             {
                 Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
+                return null;
+            }
+
+            var uVersion = GetSteam3AppBuildNumber(appId, branch);
+
+            string installDir;
+            if (!CreateDirectories(depotId, uVersion, contentName, out installDir))
+            {
+                Console.WriteLine("Error: Unable to create install directories!");
                 return null;
             }
 
@@ -665,11 +691,14 @@ namespace DepotDownloader
                 }
                 depotKey = steam3.DepotKeys[depotId];
             }
-
-            var info = new DepotDownloadInfo(depotId, manifestId, installDir, contentName);
-            info.depotKey = depotKey;
+			
+			if (!Directory.Exists("depots"))
+			{
+				Directory.CreateDirectory("depots");
+			}
             File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
-            return info;
+
+            return new DepotDownloadInfo(depotId, containingAppId, manifestId, branch, installDir, contentName, depotKey);
         }
 
         private class ChunkMatch
@@ -716,7 +745,7 @@ namespace DepotDownloader
             public ulong DepotBytesUncompressed;
         }
 
-        private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, List<ulong> deltaManifestIds)
+        private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots)
         {
             var cts = new CancellationTokenSource();
             cdnPool.ExhaustedToken = cts;
@@ -726,19 +755,9 @@ namespace DepotDownloader
             var allFileNamesAllDepots = new HashSet<String>();
 
             // First, fetch all the manifests for each depot (including previous manifests) and perform the initial setup
-            int depotsProcessed = 0;
             foreach (var depot in depots)
             {
-                DepotFilesData depotFileData = new DepotFilesData();
-                if (deltaManifestIds.Count > 0)
-                {
-                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, deltaManifestIds[depotsProcessed]);
-                    depotsProcessed += 1;
-                }
-                else
-                {
-                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, INVALID_MANIFEST_ID);
-                }
+                var depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot);
 
                 if (depotFileData != null)
                 {
@@ -774,7 +793,7 @@ namespace DepotDownloader
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
-            uint appId, DepotDownloadInfo depot, ulong deltaManifestId)
+            uint appId, DepotDownloadInfo depot)
         {
             var depotCounter = new DepotDownloadCounter();
 
@@ -782,7 +801,6 @@ namespace DepotDownloader
 
             ProtoManifest oldProtoManifest = null;
             ProtoManifest newProtoManifest = null;
-            ProtoManifest deltaProtoManifest = null;
             var configDir = Path.Combine(depot.installDir, CONFIG_DIR);
 
             var lastManifestId = INVALID_MANIFEST_ID;
@@ -860,26 +878,59 @@ namespace DepotDownloader
                     Console.Write("Downloading depot manifest...");
 
                     DepotManifest depotManifest = null;
+                    ulong manifestRequestCode = 0;
+                    var manifestRequestCodeExpiration = DateTime.MinValue;
 
                     do
                     {
                         cts.Token.ThrowIfCancellationRequested();
 
-                        CDNClient.Server connection = null;
+                        Server connection = null;
 
                         try
                         {
                             connection = cdnPool.GetConnection(cts.Token);
 
-                            DebugLog.WriteLine("ContentDownloader", "Downloading manifest {0} from {1} with {2}", depot.manifestId, connection, cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
-                            depotManifest = await cdnPool.CDNClient.DownloadManifestAsync(depot.id, depot.manifestId,
-                                connection, null, depot.depotKey, proxyServer: cdnPool.ProxyServer).ConfigureAwait(false);
+                            var now = DateTime.Now;
+
+                            // In order to download this manifest, we need the current manifest request code
+                            // The manifest request code is only valid for a specific period in time
+                            if (manifestRequestCode == 0 || now >= manifestRequestCodeExpiration)
+                            {
+                                manifestRequestCode = await steam3.GetDepotManifestRequestCodeAsync(
+                                    depot.id,
+                                    depot.appId,
+                                    depot.manifestId,
+                                    depot.branch);
+                                // This code will hopefully be valid for one period following the issuing period
+                                manifestRequestCodeExpiration = now.Add(TimeSpan.FromMinutes(5));
+
+                                // If we could not get the manifest code, this is a fatal error
+                                if (manifestRequestCode == 0)
+                                {
+                                    Console.WriteLine("No manifest request code was returned for {0} {1}", depot.id, depot.manifestId);
+                                    cts.Cancel();
+                                }
+                            }
+
+                            DebugLog.WriteLine("ContentDownloader",
+                                "Downloading manifest {0} from {1} with {2}",
+                                depot.manifestId,
+                                connection,
+                                cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
+                            depotManifest = await cdnPool.CDNClient.DownloadManifestAsync(
+                                depot.id,
+                                depot.manifestId,
+                                manifestRequestCode,
+                                connection,
+                                depot.depotKey,
+                                cdnPool.ProxyServer).ConfigureAwait(false);
 
                             cdnPool.ReturnConnection(connection);
                         }
                         catch (TaskCanceledException)
                         {
-                            Console.WriteLine("Connection timeout downloading depot manifest {0} {1}", depot.id, depot.manifestId);
+                            Console.WriteLine("Connection timeout downloading depot manifest {0} {1}. Retrying.", depot.id, depot.manifestId);
                         }
                         catch (SteamKitWebRequestException e)
                         {
@@ -928,118 +979,10 @@ namespace DepotDownloader
                     Console.WriteLine(" Done!");
                 }
             }
-            if (deltaManifestId != INVALID_MANIFEST_ID)
-            {
-                var deltaManifestFileName = Path.Combine(configDir, string.Format("{0}_{1}.bin", depot.id, deltaManifestId));
-                if (deltaManifestFileName != null)
-                {
-                    byte[] expectedChecksumD, currentChecksumD;
 
-                    try
-                    {
-                        expectedChecksumD = File.ReadAllBytes(deltaManifestFileName + ".sha");
-                    }
-                    catch (IOException)
-                    {
-                        expectedChecksumD = null;
-                    }
-
-                    deltaProtoManifest = ProtoManifest.LoadFromFile(deltaManifestFileName, out currentChecksumD);
-
-                    if (deltaProtoManifest != null && (expectedChecksumD == null || !expectedChecksumD.SequenceEqual(currentChecksumD)))
-                    {
-                        Console.WriteLine("Manifest {0} on disk did not match the expected checksum.", deltaManifestId);
-                        deltaProtoManifest = null;
-                    }
-                }
-
-                if (deltaProtoManifest != null)
-                {
-                    Console.WriteLine("Already have manifest {0} for depot {1}.", deltaManifestId, depot.id);
-                }
-                else
-                {
-                    Console.Write("Downloading delta manifest...");
-
-                    DepotManifest depotManifestD = null;
-
-                    do
-                    {
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        CDNClient.Server connection = null;
-
-                        try
-                        {
-                            connection = cdnPool.GetConnection(cts.Token);
-
-                            DebugLog.WriteLine("ContentDownloader", "Downloading manifest {0} from {1} with {2}", deltaManifestId, connection, cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
-                            depotManifestD = await cdnPool.CDNClient.DownloadManifestAsync(depot.id, deltaManifestId,
-                                connection, null, depot.depotKey, proxyServer: cdnPool.ProxyServer).ConfigureAwait(false);
-
-                            cdnPool.ReturnConnection(connection);
-                        }
-                        catch (TaskCanceledException)
-                        {
-                            Console.WriteLine("Connection timeout downloading depot manifest {0} {1}", depot.id, deltaManifestId);
-                        }
-                        catch (SteamKitWebRequestException e)
-                        {
-                            cdnPool.ReturnBrokenConnection(connection);
-
-                            if (e.StatusCode == HttpStatusCode.Unauthorized || e.StatusCode == HttpStatusCode.Forbidden)
-                            {
-                                Console.WriteLine("Encountered 401 for depot manifest {0} {1}. Aborting.", depot.id, deltaManifestId);
-                                break;
-                            }
-
-                            if (e.StatusCode == HttpStatusCode.NotFound)
-                            {
-                                Console.WriteLine("Encountered 404 for depot manifest {0} {1}. Aborting.", depot.id, deltaManifestId);
-                                break;
-                            }
-
-                            Console.WriteLine("Encountered error downloading depot manifest {0} {1}: {2}", depot.id, deltaManifestId, e.StatusCode);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            break;
-                        }
-                        catch (Exception e)
-                        {
-                            cdnPool.ReturnBrokenConnection(connection);
-                            Console.WriteLine("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, deltaManifestId, e.Message);
-                        }
-                    } while (depotManifestD == null);
-
-                    if (depotManifestD == null)
-                    {
-                        Console.WriteLine("\nUnable to download manifest {0} for depot {1}", deltaManifestId, depot.id);
-                        cts.Cancel();
-                    }
-
-                    // Throw the cancellation exception if requested so that this task is marked failed
-                    cts.Token.ThrowIfCancellationRequested();
-
-                    byte[] checksumD;
-
-                    deltaProtoManifest = new ProtoManifest(depotManifestD, deltaManifestId);
-                    deltaProtoManifest.SaveToFile(deltaManifestFileName, out checksumD);
-                    File.WriteAllBytes(deltaManifestFileName + ".sha", checksumD);
-
-                    Console.WriteLine(" Done!");
-                }
-            }
             newProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
 
             Console.WriteLine("Manifest {0} ({1})", depot.manifestId, newProtoManifest.CreationTime);
-            
-            if (deltaManifestId != INVALID_MANIFEST_ID)
-            {
-                deltaProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
-                
-                Console.WriteLine("Delta Manifest {0} ({1})", deltaManifestId, deltaProtoManifest.CreationTime);
-            }
 
             if (Config.DownloadManifestOnly)
             {
@@ -1075,10 +1018,6 @@ namespace DepotDownloader
                 }
             });
 
-            if (deltaManifestId != INVALID_MANIFEST_ID)
-            {
-                oldProtoManifest = deltaProtoManifest;
-            }
             return new DepotFilesData
             {
                 depotDownloadInfo = depot,
@@ -1369,21 +1308,25 @@ namespace DepotDownloader
             data.CompressedLength = chunk.CompressedLength;
             data.UncompressedLength = chunk.UncompressedLength;
 
-            CDNClient.DepotChunk chunkData = null;
+            DepotChunk chunkData = null;
 
             do
             {
                 cts.Token.ThrowIfCancellationRequested();
 
-                CDNClient.Server connection = null;
+                Server connection = null;
 
                 try
                 {
                     connection = cdnPool.GetConnection(cts.Token);
 
                     DebugLog.WriteLine("ContentDownloader", "Downloading chunk {0} from {1} with {2}", chunkID, connection, cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
-                    chunkData = await cdnPool.CDNClient.DownloadDepotChunkAsync(depot.id, data,
-                        connection, null, depot.depotKey, proxyServer: cdnPool.ProxyServer).ConfigureAwait(false);
+                    chunkData = await cdnPool.CDNClient.DownloadDepotChunkAsync(
+                        depot.id,
+                        data,
+                        connection,
+                        depot.depotKey,
+                        cdnPool.ProxyServer).ConfigureAwait(false);
 
                     cdnPool.ReturnConnection(connection);
                 }
