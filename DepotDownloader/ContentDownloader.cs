@@ -62,10 +62,10 @@ namespace DepotDownloader
 		
 		public class LanzadorData
 		{
-			public ulong AppTokenParameter;
+			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
 			
-			public LanzadorData(ulong apptoken, List<ulong> deltaid)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaid)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestIds = deltaid;
