@@ -131,7 +131,8 @@ namespace DepotDownloader
 			
 			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
 			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
-			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds);
+			string? deltabranch = GetParameter<string?>(args, "-delta-branch");
+			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch);
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);
@@ -143,6 +144,11 @@ namespace DepotDownloader
                 {
                     try
                     {
+                        if (deltaManifestIds.Count > 1)
+                        {
+                            Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
+                            return 1;
+                        }
                         await ContentDownloader.DownloadPubfileAsync(appId, pubFile, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
@@ -178,6 +184,11 @@ namespace DepotDownloader
                 {
                     try
                     {
+                        if (deltaManifestIds.Count > 1)
+                        {
+                            Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
+                            return 1;
+                        }
                         await ContentDownloader.DownloadUGCAsync(appId, ugcId, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
@@ -239,6 +250,7 @@ namespace DepotDownloader
 
                 var depotIdList = GetParameterList<uint>(args, "-depot");
                 var manifestIdList = GetParameterList<ulong>(args, "-manifest");
+
                 if (manifestIdList.Count > 0)
                 {
                     if (depotIdList.Count != manifestIdList.Count)
@@ -253,6 +265,12 @@ namespace DepotDownloader
                 else
                 {
                     depotManifestIds.AddRange(depotIdList.Select(depotId => (depotId, ContentDownloader.INVALID_MANIFEST_ID)));
+                }
+
+                if (deltaManifestIds.Count > 0 && depotIdList.Count != deltaManifestIds.Count)
+                {
+                    Console.WriteLine("Error: -delta-manifest requires one id for every -depot specified");
+                    return 1;
                 }
 
                 if (InitializeSteam(username, password))

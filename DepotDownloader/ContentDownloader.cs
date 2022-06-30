@@ -64,11 +64,13 @@ namespace DepotDownloader
 		{
 			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
+			public string? deltabranch
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaid)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr)
 			{
 				AppTokenParameter = apptoken;
-				deltaManifestIds = deltaid;
+				deltaManifestIds = deltaids;
+				deltabranch = deltabr;
 			}
 		}
 
@@ -628,7 +630,7 @@ namespace DepotDownloader
 
             try
             {
-                await DownloadSteam3Async(appId, infos).ConfigureAwait(false);
+                await DownloadSteam3Async(appId, infos, Lanzador).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -757,7 +759,7 @@ namespace DepotDownloader
             public ulong DepotBytesUncompressed;
         }
 
-        private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots)
+        private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, LanzadorData Lanzador)
         {
             var cts = new CancellationTokenSource();
             cdnPool.ExhaustedToken = cts;
@@ -767,9 +769,20 @@ namespace DepotDownloader
             var allFileNamesAllDepots = new HashSet<String>();
 
             // First, fetch all the manifests for each depot (including previous manifests) and perform the initial setup
+			int depotsProcessed = 0;
             foreach (var depot in depots)
             {
-                var depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot);
+                DepotFilesData depotFileData = new DepotFilesData();
+
+                if (Lanzador.deltaManifestIds.Count > 0)
+                {
+                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, Lanzador.deltaManifestIds[depotsProcessed], Lanzador.deltabranch);
+                    depotsProcessed += 1;
+                }
+                else
+                {
+                    depotFileData = await ProcessDepotManifestAndFiles(cts, appId, depot, INVALID_MANIFEST_ID, null);
+                }
 
                 if (depotFileData != null)
                 {
@@ -805,7 +818,7 @@ namespace DepotDownloader
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
-            uint appId, DepotDownloadInfo depot)
+            uint appId, DepotDownloadInfo depot, ulong deltaManifestId string? deltabranch)
         {
             var depotCounter = new DepotDownloadCounter();
 
@@ -907,7 +920,7 @@ namespace DepotDownloader
 
                             // In order to download this manifest, we need the current manifest request code
                             // The manifest request code is only valid for a specific period in time
-                            if (manifestRequestCode == 0 || now >= manifestRequestCodeExpiration)
+                            if ((manifestRequestCode == 0 || now >= manifestRequestCodeExpiration) && !File.Exists(String.Format("manifests\\{0}_{1}.manifest", depot.id, depot.manifestId)))
                             {
                                 manifestRequestCode = await steam3.GetDepotManifestRequestCodeAsync(
                                     depot.id,
@@ -918,7 +931,7 @@ namespace DepotDownloader
                                 manifestRequestCodeExpiration = now.Add(TimeSpan.FromMinutes(5));
 
                                 // If we could not get the manifest code, this is a fatal error
-                                if (manifestRequestCode == 0 && !File.Exists(String.Format("manifests\\{0}_{1}.manifest", depot.id, depot.manifestId)))
+                                if (manifestRequestCode == 0)
                                 {
                                     Console.WriteLine("No manifest request code was returned for {0} {1}", depot.id, depot.manifestId);
                                     cts.Cancel();
@@ -991,10 +1004,152 @@ namespace DepotDownloader
                     Console.WriteLine(" Done!");
                 }
             }
+			
+			if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                var deltaManifestFileName = Path.Combine(configDir, string.Format("{0}_{1}.bin", depot.id, deltaManifestId));
+                if (deltaManifestFileName != null)
+                {
+                    byte[] expectedChecksumD, currentChecksumD;
+
+                    try
+                    {
+                        expectedChecksumD = File.ReadAllBytes(deltaManifestFileName + ".sha");
+                    }
+                    catch (IOException)
+                    {
+                        expectedChecksumD = null;
+                    }
+
+                    deltaProtoManifest = ProtoManifest.LoadFromFile(deltaManifestFileName, out currentChecksumD);
+
+                    if (deltaProtoManifest != null && (expectedChecksumD == null || !expectedChecksumD.SequenceEqual(currentChecksumD)))
+                    {
+                        Console.WriteLine("Manifest {0} on disk did not match the expected checksum.", deltaManifestId);
+                        deltaProtoManifest = null;
+                    }
+                }
+
+                if (deltaProtoManifest != null)
+                {
+                    Console.WriteLine("Already have manifest {0} for depot {1}.", deltaManifestId, depot.id);
+                }
+                else
+                {
+                    Console.Write("Downloading delta manifest...");
+
+                    DepotManifest depotManifestD = null;
+	                ulong manifestRequestCodeD = 0;
+                    var manifestRequestCodeExpirationD = DateTime.MinValue;
+
+                    do
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
+                        Server connection = null;
+                        try
+                        {
+                            connection = cdnPool.GetConnection(cts.Token);
+
+	                        var now = DateTime.Now;
+                            // In order to download this manifest, we need the current manifest request code
+                            // The manifest request code is only valid for a specific period in time
+                            if ((manifestRequestCode == 0 || now >= manifestRequestCodeExpiration) && !File.Exists(String.Format("manifests\\{0}_{1}.manifest", depot.id, deltaManifestId)))
+                            {
+								if (deltabranch == null)
+								{
+									deltabranch = depot.branch
+								}
+                                manifestRequestCode = await steam3.GetDepotManifestRequestCodeAsync(
+                                    depot.id,
+                                    depot.appId,
+                                    deltaManifestId,
+                                    deltabranch);
+                                // This code will hopefully be valid for one period following the issuing period
+                                manifestRequestCodeExpiration = now.Add(TimeSpan.FromMinutes(5));
+                                // If we could not get the manifest code, this is a fatal error
+                                if (manifestRequestCode == 0)
+                                {
+                                    Console.WriteLine("No manifest request code was returned for {0} {1}", depot.id, deltaManifestId);
+                                    cts.Cancel();
+                                }
+                            }
+                            DebugLog.WriteLine("ContentDownloader",
+                                "Downloading manifest {0} from {1} with {2}",
+                                deltaManifestId,
+                                connection,
+                                cdnPool.ProxyServer != null ? cdnPool.ProxyServer : "no proxy");
+                            depotManifest = await cdnPool.CDNClient.DownloadManifestAsync(
+                                depot.id,
+                                deltaManifestId,
+                                manifestRequestCode,
+                                connection,
+                                depot.depotKey,
+                                cdnPool.ProxyServer).ConfigureAwait(false);
+
+                            cdnPool.ReturnConnection(connection);
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Console.WriteLine("Connection timeout downloading depot manifest {0} {1}", depot.id, deltaManifestId);
+                        }
+                        catch (SteamKitWebRequestException e)
+                        {
+                            cdnPool.ReturnBrokenConnection(connection);
+
+                            if (e.StatusCode == HttpStatusCode.Unauthorized || e.StatusCode == HttpStatusCode.Forbidden)
+                            {
+                                Console.WriteLine("Encountered 401 for depot manifest {0} {1}. Aborting.", depot.id, deltaManifestId);
+                                break;
+                            }
+
+                            if (e.StatusCode == HttpStatusCode.NotFound)
+                            {
+                                Console.WriteLine("Encountered 404 for depot manifest {0} {1}. Aborting.", depot.id, deltaManifestId);
+                                break;
+                            }
+
+                            Console.WriteLine("Encountered error downloading depot manifest {0} {1}: {2}", depot.id, deltaManifestId, e.StatusCode);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                        catch (Exception e)
+                        {
+                            cdnPool.ReturnBrokenConnection(connection);
+                            Console.WriteLine("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, deltaManifestId, e.Message);
+                        }
+                    } while (depotManifestD == null);
+
+                    if (depotManifestD == null)
+                    {
+                        Console.WriteLine("\nUnable to download manifest {0} for depot {1}", deltaManifestId, depot.id);
+                        cts.Cancel();
+                    }
+
+                    // Throw the cancellation exception if requested so that this task is marked failed
+                    cts.Token.ThrowIfCancellationRequested();
+
+                    byte[] checksumD;
+
+                    deltaProtoManifest = new ProtoManifest(depotManifestD, deltaManifestId);
+                    deltaProtoManifest.SaveToFile(deltaManifestFileName, out checksumD);
+                    File.WriteAllBytes(deltaManifestFileName + ".sha", checksumD);
+
+                    Console.WriteLine(" Done!");
+                }
+            }
 
             newProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
 
             Console.WriteLine("Manifest {0} ({1})", depot.manifestId, newProtoManifest.CreationTime);
+            
+            if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                deltaProtoManifest.Files.Sort((x, y) => string.Compare(x.FileName, y.FileName, StringComparison.Ordinal));
+                
+                Console.WriteLine("Delta Manifest {0} ({1})", deltaManifestId, deltaProtoManifest.CreationTime);
+            }
 
             if (Config.DownloadManifestOnly)
             {
@@ -1030,6 +1185,10 @@ namespace DepotDownloader
                 }
             });
 
+            if (deltaManifestId != INVALID_MANIFEST_ID)
+            {
+                oldProtoManifest = deltaProtoManifest;
+            }
             return new DepotFilesData
             {
                 depotDownloadInfo = depot,
