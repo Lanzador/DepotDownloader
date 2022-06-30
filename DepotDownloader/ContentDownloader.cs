@@ -64,7 +64,7 @@ namespace DepotDownloader
 		{
 			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
-			public string? deltabranch
+			public string? deltabranch;
 
 			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr)
 			{
@@ -818,7 +818,7 @@ namespace DepotDownloader
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
-            uint appId, DepotDownloadInfo depot, ulong deltaManifestId string? deltabranch)
+            uint appId, DepotDownloadInfo depot, ulong deltaManifestId, string? deltabranch)
         {
             var depotCounter = new DepotDownloadCounter();
 
@@ -1057,7 +1057,7 @@ namespace DepotDownloader
                             {
 								if (deltabranch == null)
 								{
-									deltabranch = depot.branch
+									deltabranch = depot.branch;
 								}
                                 manifestRequestCode = await steam3.GetDepotManifestRequestCodeAsync(
                                     depot.id,
