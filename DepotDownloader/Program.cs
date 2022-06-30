@@ -135,14 +135,14 @@ namespace DepotDownloader
 			int ProgressEveryT;
 			if (HasParameter(args, "-progress-every-s"))
 			{
-				ProgressEveryT = GetParameter(args, "-progress-every-s") * 1000;
+				ProgressEveryT = GetParameter<int>(args, "-progress-every-s") * 1000;
 			}
 			else
 			{
-				ProgressEveryT = GetParameter(args, "-progress-every-ms") ?? 0;
+				ProgressEveryT = GetParameter<int>(args, "-progress-every-ms") ?? 0;
 			}
-			ProgressEveryP = GetParameter(args, "-progress-every-p") ?? 0;
-			ProgressEveryB = GetParameter(args, "-progress-every-b") ?? 0;
+			float ProgressEveryP = GetParameter<float>(args, "-progress-every-p") ?? 0;
+			int ProgressEveryB = GetParameter<int>(args, "-progress-every-b") ?? 0;
 			GetParameter(args, "-max-servers", 20);
 			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB);
 			#nullable disable
