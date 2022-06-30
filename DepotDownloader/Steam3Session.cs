@@ -195,7 +195,7 @@ namespace DepotDownloader
                 }
                 if (Lanzador.AppTokenParameter != null)
                 {
-                    this.AppTokens.Add(appId, Lanzador.AppTokenParameter);
+                    this.AppTokens.Add(appId, Lanzador.AppTokenParameter.Value);
                 }
             };
 
