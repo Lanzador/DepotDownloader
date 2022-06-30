@@ -1133,7 +1133,7 @@ namespace DepotDownloader
 
                     byte[] checksumD;
 
-                    deltaProtoManifest = new ProtoManifest(depotManifestD, deltaManifestId);
+                    deltaProtoManifest = new ProtoManifest(depotManifest, deltaManifestId);
                     deltaProtoManifest.SaveToFile(deltaManifestFileName, out checksumD);
                     File.WriteAllBytes(deltaManifestFileName + ".sha", checksumD);
 
