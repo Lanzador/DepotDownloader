@@ -65,7 +65,7 @@ namespace DepotDownloader
 			public ulong AppTokenParameter;
 			public ulong deltaManifestId;
 			
-			public LanzadorData(ulong apptoken, ulong deltaid)
+			public LanzadorData(ulong apptoken, List<ulong> deltaid)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestId = deltaid;
