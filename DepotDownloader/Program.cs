@@ -132,8 +132,20 @@ namespace DepotDownloader
 			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
 			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
 			string? deltabranch = GetParameter<string?>(args, "-delta-branch");
+			int ProgressEveryT;
+			if (HasParameter(args, "-progress-every-s"))
+			{
+				ProgressEveryT = GetParameter(args, "-progress-every-s") * 1000;
+			}
+			else
+			{
+				ProgressEveryT = GetParameter(args, "-progress-every-ms") ?? 0;
+			}
+			ProgressEveryP = GetParameter(args, "-progress-every-p") ?? 0;
+			ProgressEveryB = GetParameter(args, "-progress-every-b") ?? 0;
+			GetParameter(args, "-max-servers", 20);
+			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB);
 			#nullable disable
-			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch);
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);

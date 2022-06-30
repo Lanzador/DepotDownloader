@@ -65,12 +65,18 @@ namespace DepotDownloader
 			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
 			public string? deltabranch;
+			public int ProgressEveryT;
+			public float ProgressEveryP;
+			public int ProgressEveryB;
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, int progressT, float progressP, int progressB)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestIds = deltaids;
 				deltabranch = deltabr;
+				ProgressEveryT = progressT;
+				ProgressEveryP = progressP;
+				ProgressEveryB = progressB;
 			}
 		}
 
@@ -749,6 +755,7 @@ namespace DepotDownloader
         {
             public ulong TotalBytesCompressed;
             public ulong TotalBytesUncompressed;
+			public Stopwatch TotalDownloadTime;
         }
 
         private class DepotDownloadCounter
@@ -757,6 +764,10 @@ namespace DepotDownloader
             public ulong SizeDownloaded;
             public ulong DepotBytesCompressed;
             public ulong DepotBytesUncompressed;
+			public Stopwatch DepotDownloadTime;
+			public int ProgressEveryS;
+			public float ProgressEveryP;
+			public int ProgressEveryB;
         }
 
         private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, LanzadorData Lanzador)
@@ -808,13 +819,16 @@ namespace DepotDownloader
                 }
             }
 
+            downloadCounter.TotalDownloadTime.Start();
             foreach (var depotFileData in depotsToDownload)
             {
                 await DownloadSteam3AsyncDepotFiles(cts, appId, downloadCounter, depotFileData, allFileNamesAllDepots);
             }
+            downloadCounter.TotalDownloadTime.Stop();
+			TimeSpan totalts = downloadCounter.TotalDownloadTime.Elapsed;
 
-            Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots",
-                downloadCounter.TotalBytesCompressed, downloadCounter.TotalBytesUncompressed, depots.Count);
+            Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots in {3:00}:{4:00}:{5:00}",
+                downloadCounter.TotalBytesCompressed, downloadCounter.TotalBytesUncompressed, depots.Count, totalts.Hours, totalts.Minutes, totalts.Seconds);
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
@@ -1213,6 +1227,7 @@ namespace DepotDownloader
             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
             var networkChunkQueue = new ConcurrentQueue<(FileStreamData fileStreamData, ProtoManifest.FileData fileData, ProtoManifest.ChunkData chunk)>();
 
+            depotCounter.DepotDownloadTime.Start();
             await Util.InvokeAsync(
                 files.Select(file => new Func<Task>(async () =>
                     await Task.Run(() => DownloadSteam3AsyncDepotFile(cts, depotFilesData, file, networkChunkQueue)))),
@@ -1258,7 +1273,9 @@ namespace DepotDownloader
             DepotConfigStore.Instance.InstalledManifestIDs[depot.id] = depot.manifestId;
             DepotConfigStore.Save();
 
-            Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed)", depot.id, depotCounter.DepotBytesCompressed, depotCounter.DepotBytesUncompressed);
+			depotCounter.DepotDownloadTime.Stop();
+			TimeSpan tsdepot = depotCounter.DepotDownloadTime.Elapsed;
+            Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}", depot.id, depotCounter.DepotBytesCompressed, depotCounter.DepotBytesUncompressed, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds);
         }
 
         private static void DownloadSteam3AsyncDepotFile(
