@@ -59,12 +59,12 @@ namespace DepotDownloader
                 this.depotKey = depotKey;
             }
         }
-		
+
 		public class LanzadorData
 		{
 			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
-			
+
 			public LanzadorData(ulong? apptoken, List<ulong> deltaid)
 			{
 				AppTokenParameter = apptoken;
@@ -918,7 +918,7 @@ namespace DepotDownloader
                                 manifestRequestCodeExpiration = now.Add(TimeSpan.FromMinutes(5));
 
                                 // If we could not get the manifest code, this is a fatal error
-                                if (manifestRequestCode == 0)
+                                if (manifestRequestCode == 0 && !File.Exists(String.Format("manifests\\{0}_{1}.manifest", depotId, manifestId)))
                                 {
                                     Console.WriteLine("No manifest request code was returned for {0} {1}", depot.id, depot.manifestId);
                                     cts.Cancel();
