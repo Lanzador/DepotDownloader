@@ -128,10 +128,11 @@ namespace DepotDownloader
                 Console.WriteLine("Error: -app not specified!");
                 return 1;
             }
-			
+			#nullable enable
 			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
 			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
 			string? deltabranch = GetParameter<string?>(args, "-delta-branch");
+			#nullable disable
 			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch);
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);

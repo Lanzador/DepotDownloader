@@ -826,6 +826,7 @@ namespace DepotDownloader
 
             ProtoManifest oldProtoManifest = null;
             ProtoManifest newProtoManifest = null;
+            ProtoManifest deltaProtoManifest = null;
             var configDir = Path.Combine(depot.installDir, CONFIG_DIR);
 
             var lastManifestId = INVALID_MANIFEST_ID;
@@ -1038,9 +1039,9 @@ namespace DepotDownloader
                 {
                     Console.Write("Downloading delta manifest...");
 
-                    DepotManifest depotManifestD = null;
-	                ulong manifestRequestCodeD = 0;
-                    var manifestRequestCodeExpirationD = DateTime.MinValue;
+                    DepotManifest depotManifest = null;
+	                ulong manifestRequestCode = 0;
+                    var manifestRequestCodeExpiration = DateTime.MinValue;
 
                     do
                     {
@@ -1119,9 +1120,9 @@ namespace DepotDownloader
                             cdnPool.ReturnBrokenConnection(connection);
                             Console.WriteLine("Encountered error downloading manifest for depot {0} {1}: {2}", depot.id, deltaManifestId, e.Message);
                         }
-                    } while (depotManifestD == null);
+                    } while (depotManifest == null);
 
-                    if (depotManifestD == null)
+                    if (depotManifest == null)
                     {
                         Console.WriteLine("\nUnable to download manifest {0} for depot {1}", deltaManifestId, depot.id);
                         cts.Cancel();
