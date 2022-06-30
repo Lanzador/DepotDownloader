@@ -418,7 +418,7 @@ namespace DepotDownloader
             steam3.Disconnect();
         }
 
-        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId)
+        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId, LanzadorData Lanzador)
         {
             var details = steam3.GetPublishedFileDetails(appId, publishedFileId);
 
@@ -428,7 +428,7 @@ namespace DepotDownloader
             }
             else if (details?.hcontent_file > 0)
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true, Lanzador);
             }
             else
             {
@@ -436,7 +436,7 @@ namespace DepotDownloader
             }
         }
 
-        public static async Task DownloadUGCAsync(uint appId, ulong ugcId)
+        public static async Task DownloadUGCAsync(uint appId, ulong ugcId, LanzadorData Lanzador)
         {
             SteamCloud.UGCDetailsCallback details = null;
 
@@ -455,7 +455,7 @@ namespace DepotDownloader
             }
             else
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, ugcId) }, DEFAULT_BRANCH, null, null, null, false, true);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, ugcId) }, DEFAULT_BRANCH, null, null, null, false, true, Lanzador);
             }
         }
 

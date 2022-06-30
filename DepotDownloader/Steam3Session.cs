@@ -185,7 +185,7 @@ namespace DepotDownloader
                     Console.WriteLine("Insufficient privileges to get access token for app {0}", appId);
 					if (Lanzador.AppTokenParameter != null)
                     {
-                        Console.WriteLine( "Will try to use app token given in the parameter.");
+                        Console.WriteLine("Will try to use app token given in the parameter.");
                     }
                 }
 
@@ -195,7 +195,7 @@ namespace DepotDownloader
                 }
                 if (Lanzador.AppTokenParameter != null)
                 {
-                    this.AppTokens.Add( appId, AppTokenParameter );
+                    this.AppTokens.Add(appId, Lanzador.AppTokenParameter);
                 }
             };
 
