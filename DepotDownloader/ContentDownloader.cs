@@ -820,6 +820,7 @@ namespace DepotDownloader
                 }
             }
 
+            downloadCounter.TotalDownloadTime = new Stopwatch();
             downloadCounter.TotalDownloadTime.Start();
             foreach (var depotFileData in depotsToDownload)
             {
@@ -1228,6 +1229,7 @@ namespace DepotDownloader
             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
             var networkChunkQueue = new ConcurrentQueue<(FileStreamData fileStreamData, ProtoManifest.FileData fileData, ProtoManifest.ChunkData chunk)>();
 
+            depotCounter.DepotDownloadTime = new Stopwatch();
             depotCounter.DepotDownloadTime.Start();
             await Util.InvokeAsync(
                 files.Select(file => new Func<Task>(async () =>
