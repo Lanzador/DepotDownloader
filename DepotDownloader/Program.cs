@@ -128,6 +128,10 @@ namespace DepotDownloader
                 Console.WriteLine("Error: -app not specified!");
                 return 1;
             }
+			
+			ulong AppTokenParameter = GetParameter<ulong>(args, "-apptoken");
+			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
+			ContentDownloader.LanzadorData Lanzador = ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds);
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);
@@ -255,7 +259,7 @@ namespace DepotDownloader
                 {
                     try
                     {
-                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC).ConfigureAwait(false);
+                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException

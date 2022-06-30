@@ -59,6 +59,18 @@ namespace DepotDownloader
                 this.depotKey = depotKey;
             }
         }
+		
+		public class LanzadorData
+		{
+			public ulong AppTokenParameter;
+			public ulong deltaManifestId;
+			
+			public LanzadorData(ulong apptoken, ulong deltaid)
+			{
+				AppTokenParameter = apptoken;
+				deltaManifestId = deltaid;
+			}
+		}
 
         static bool CreateDirectories(uint depotId, uint depotVersion, string contentName, out string installDir)
         {
@@ -232,7 +244,7 @@ namespace DepotDownloader
             return depotChild["depotfromapp"].AsUnsignedInteger();
         }
 
-        static ulong GetSteam3DepotManifest(uint depotId, uint appId, string branch)
+        static ulong GetSteam3DepotManifest(uint depotId, uint appId, string branch, LanzadorData Lanzador)
         {
             var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
             var depotChild = depots[depotId.ToString()];
@@ -254,9 +266,9 @@ namespace DepotDownloader
                     return INVALID_MANIFEST_ID;
                 }
 
-                steam3.RequestAppInfo(otherAppId);
+                steam3.RequestAppInfo(otherAppId, Lanzador);
 
-                return GetSteam3DepotManifest(depotId, otherAppId, branch);
+                return GetSteam3DepotManifest(depotId, otherAppId, branch, Lanzador);
             }
 
             var manifests = depotChild["manifests"];
@@ -479,7 +491,7 @@ namespace DepotDownloader
             File.Move(fileStagingPath, fileFinalPath);
         }
 
-        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc)
+        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc, LanzadorData Lanzador)
         {
             cdnPool = new CDNClientPool(steam3, appId);
 
@@ -494,7 +506,7 @@ namespace DepotDownloader
             DepotConfigStore.LoadFromFile(Path.Combine(configPath, CONFIG_DIR, "depot.config"));
 
             if (steam3 != null)
-                steam3.RequestAppInfo(appId);
+                steam3.RequestAppInfo(appId, Lanzador);
 
             /*if (!AccountHasAccess(appId))
             {
@@ -607,7 +619,7 @@ namespace DepotDownloader
 
             foreach (var depotManifest in depotManifestIds)
             {
-                var info = GetDepotInfo(depotManifest.Item1, appId, depotManifest.Item2, branch);
+                var info = GetDepotInfo(depotManifest.Item1, appId, depotManifest.Item2, branch, Lanzador);
                 if (info != null)
                 {
                     infos.Add(info);
@@ -625,10 +637,10 @@ namespace DepotDownloader
             }
         }
 
-        static DepotDownloadInfo GetDepotInfo(uint depotId, uint appId, ulong manifestId, string branch)
+        static DepotDownloadInfo GetDepotInfo(uint depotId, uint appId, ulong manifestId, string branch, LanzadorData Lanzador)
         {
             if (steam3 != null && appId != INVALID_APP_ID)
-                steam3.RequestAppInfo(appId);
+                steam3.RequestAppInfo(appId, Lanzador);
 
             var contentName = GetAppOrDepotName(depotId, appId);
 
@@ -641,12 +653,12 @@ namespace DepotDownloader
 
             if (manifestId == INVALID_MANIFEST_ID)
             {
-                manifestId = GetSteam3DepotManifest(depotId, appId, branch);
+                manifestId = GetSteam3DepotManifest(depotId, appId, branch, Lanzador);
                 if (manifestId == INVALID_MANIFEST_ID && branch != "public")
                 {
                     Console.WriteLine("Warning: Depot {0} does not have branch named \"{1}\". Trying public branch.", depotId, branch);
                     branch = "public";
-                    manifestId = GetSteam3DepotManifest(depotId, appId, branch);
+                    manifestId = GetSteam3DepotManifest(depotId, appId, branch, Lanzador);
                 }
 
                 if (manifestId == INVALID_MANIFEST_ID)
