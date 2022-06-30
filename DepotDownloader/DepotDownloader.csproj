@@ -8,7 +8,6 @@
     <Description>Steam Downloading Utility</Description>
     <Authors>SteamRE Team</Authors>
     <Copyright>Copyright © SteamRE Team 2021</Copyright>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
