@@ -129,7 +129,7 @@ namespace DepotDownloader
                 return 1;
             }
 			
-			ulong? AppTokenParameter = GetParameter<ulong>(args, "-apptoken");
+			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
 			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
 			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds);
 
