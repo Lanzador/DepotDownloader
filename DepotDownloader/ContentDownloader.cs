@@ -542,7 +542,8 @@ namespace DepotDownloader
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
             var depotIdsExpected = depotManifestIds.Select(x => x.Item1).ToList();
-            var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
+			KeyValue depots;
+            if (!Lanzador.SkipDepotCheck) depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
 
             if (isUgc)
             {
@@ -657,7 +658,8 @@ namespace DepotDownloader
             if (steam3 != null && appId != INVALID_APP_ID)
                 steam3.RequestAppInfo(appId, Lanzador);
 
-            var contentName = GetAppOrDepotName(depotId, appId);
+            string contentName = "";
+            if (!Lanzador.SkipDepotCheck) contentName = GetAppOrDepotName(depotId, appId);
 
             /*if (!AccountHasAccess(depotId))
             {
@@ -685,16 +687,20 @@ namespace DepotDownloader
 
             // For depots that are proxied through depotfromapp, we still need to resolve the proxy app id
             var containingAppId = appId;
-            var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
-            if (proxyAppId != INVALID_APP_ID) containingAppId = proxyAppId;
+			
+			if (!Lanzador.SkipDepotCheck)
+			{
+                var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
+                if (proxyAppId != INVALID_APP_ID) containingAppId = proxyAppId;
+		    }
 
             if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
             {
                 Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
                 return null;
             }
-
-            var uVersion = GetSteam3AppBuildNumber(appId, branch);
+			uint uVersion = 0;
+            if (!Lanzador.SkipDepotCheck) uVersion = GetSteam3AppBuildNumber(appId, branch);
 
             string installDir;
             if (!CreateDirectories(depotId, uVersion, contentName, out installDir))
