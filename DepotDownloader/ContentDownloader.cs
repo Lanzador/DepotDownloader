@@ -1597,10 +1597,10 @@ namespace DepotDownloader
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
 				if (depotDownloadCounter.ProgressEveryP > 0)
 				{
-					if (Math.Floor((sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / ProgressEveryP) > Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / ProgressEveryP))
+					if (Math.Floor((sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / depotDownloadCounter.ProgressEveryP) > Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / depotDownloadCounter.ProgressEveryP))
 					{
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
-						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, fileFinalPath, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 					}
 				}
                 depotDownloadCounter.SizeDownloaded = sizeDownloaded;
