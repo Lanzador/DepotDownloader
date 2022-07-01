@@ -14,7 +14,7 @@ Edit #2
 
 Unnumbered edits (I forgot to update the readme...)
 
- * You can load a manifest - encrypted or decrypted - from a file by putting the file in the "manifests" folder and naming it "\<DepotID\>_\<ManifestID\>.manifest" or "\<DepotID\>.manifest".
+ * You can load a manifest - encrypted or decrypted - from a file by putting the file in the "manifests" folder and naming it "\<DepotID\>_\<ManifestID\>.manifest" ~~or "\<DepotID\>.manifest"~~.
  * Fixed the tool not working because Steam removed CDN tokens.
  * When downloading a manifest, it's saved to "manifests\downloaded" (in encrypted form, sorry).
  * Merged this outdated fork's features with a new version of DD (Also, right now when copying the result from Lanzador/merge-dd I had to add a line to the csproj to fix some weird error). The pre-merge version can be found in the pre-merge branch.
