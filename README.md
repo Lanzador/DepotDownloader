@@ -28,6 +28,7 @@ Edit #5
 
  * Added all features of this fork to DepotDownloader 2.4.6. You can now download manifests through your account again!
  * While re-adding the changes of the original fork, got rid of some unused stuff. Also finally fixed crash when `-dir` is used before the `depots` folder is created.
+ * Also put all new parameters into `LanzadorData` to not write each one as an argument in lots of places.
  * Removed loading manifests from "\<DepotID\>.manifest". Use the full file name. Also removed the option to disable manifest saving by creating NOSAVE.txt in "manifests\downloaded" - I didn't even mention it here, I probably forgot about it right after making it.
  * Finally fixed the fact it says "Will try to use app token given in the parameter." even if none is given. Sounds familiar? This time for real.
  * Added `-delta-branch` to specify branch of the old manifest if it was different for requesting the manifest code. Seems to work even without doing this, but I didn't know that until I made it. Perhaps it'll be useful someday.
