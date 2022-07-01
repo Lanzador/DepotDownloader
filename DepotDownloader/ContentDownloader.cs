@@ -542,10 +542,10 @@ namespace DepotDownloader
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
             var depotIdsExpected = depotManifestIds.Select(x => x.Item1).ToList();
-			KeyValue depots;
+			KeyValue depots = new KeyValue();
             if (!Lanzador.SkipDepotCheck) depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
 
-            if (isUgc && !Lanzador.SkipDepotCheck)
+            if (isUgc)
             {
                 var workshopDepot = depots["workshopdepot"].AsUnsignedInteger();
                 if (workshopDepot != 0 && !depotIdsExpected.Contains(workshopDepot))
