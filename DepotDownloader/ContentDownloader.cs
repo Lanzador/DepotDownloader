@@ -1596,8 +1596,8 @@ namespace DepotDownloader
             lock (depotDownloadCounter)
             {
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
-				Stopwatch checkoutputtime = new Stopwatch;
-				Stopwatch checkoutputtime2 = new Stopwatch;
+				Stopwatch checkoutputtime = new Stopwatch();
+				Stopwatch checkoutputtime2 = new Stopwatch();
 				checkoutputtime.Start();
 				if (depotDownloadCounter.ProgressEveryP > 0)
 				{
