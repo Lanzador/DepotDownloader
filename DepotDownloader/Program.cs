@@ -147,7 +147,9 @@ namespace DepotDownloader
 				ProgressEveryP = 0;
 			}
 			ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
-			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB);
+			bool FreeLicense = HasParameter(args, "-free-license");
+			bool SkipDepotCheck = HasParameter(args, "-depot-exists");
+			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB, FreeLicense, SkipDepotCheck);
 			#nullable disable
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);

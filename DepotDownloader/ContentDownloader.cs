@@ -70,8 +70,10 @@ namespace DepotDownloader
 			public uint ProgressEveryT;
 			public float ProgressEveryP;
 			public ulong ProgressEveryB;
+			public bool FreeLicense;
+			public bool SkipDepotCheck;
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestIds = deltaids;
@@ -79,6 +81,8 @@ namespace DepotDownloader
 				ProgressEveryT = progressT;
 				ProgressEveryP = progressP;
 				ProgressEveryB = progressB;
+				FreeLicense = reqfree;
+				SkipDepotCheck = skipcheck;
 			}
 		}
 		#nullable disable
@@ -519,7 +523,7 @@ namespace DepotDownloader
             if (steam3 != null)
                 steam3.RequestAppInfo(appId, Lanzador);
 
-            /*if (!AccountHasAccess(appId))
+            if (Lanzador.FreeLicense && !AccountHasAccess(appId))
             {
                 if (steam3.RequestFreeAppLicense(appId))
                 {
@@ -533,7 +537,7 @@ namespace DepotDownloader
                     var contentName = GetAppOrDepotName(INVALID_DEPOT_ID, appId);
                     throw new ContentDownloaderException(String.Format("App {0} ({1}) is not available from this account.", appId, contentName));
                 }
-            }*/
+            }
 
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
@@ -619,7 +623,7 @@ namespace DepotDownloader
                     throw new ContentDownloaderException(String.Format("Couldn't find any depots to download for app {0}", appId));
                 }
 
-                if (depotIdsFound.Count < depotIdsExpected.Count)
+                if (depotIdsFound.Count < depotIdsExpected.Count && !Lanzador.SkipDepotCheck)
                 {
                     var remainingDepotIds = depotIdsExpected.Except(depotIdsFound);
                     throw new ContentDownloaderException(String.Format("Depot {0} not listed for app {1}", string.Join(", ", remainingDepotIds), appId));
@@ -1596,15 +1600,36 @@ namespace DepotDownloader
             lock (depotDownloadCounter)
             {
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
+				if (depotDownloadCounter.ProgressEveryT > 0)
+				{
+					uint progressConditionValue = (uint)Math.Floor(depotDownloadCounter.DepotDownloadTime.MillisecondsElapsed / depotDownloadCounter.ProgressEveryT);
+					if (progressConditionValue > depotDownloadCounter.ProgressLastT)
+					{
+						depotDownloadCounter.ProgressLastT = progressConditionValue);
+						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+					}
+				}
 				if (depotDownloadCounter.ProgressEveryP > 0)
 				{
 					float currentPercentage = (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize);
-					if (Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP) > depotDownloadCounter.ProgressLastP)
+					uint progressConditionValue = (uint)Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP);
+					if (progressConditionValue > depotDownloadCounter.ProgressLastP)
 					{
 						//Instead of multiplying values by 100 to get a percentage during every check, the user-provided -progress-every-p value is divided by 100 (in Program.cs).
+						depotDownloadCounter.ProgressLastP = progressConditionValue;
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
 						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
-						depotDownloadCounter.ProgressLastP = (uint)Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP);
+					}
+				}
+				if (depotDownloadCounter.ProgressEveryB > 0)
+				{
+					uint progressConditionValue = (uint)Math.Floor(sizeDownloaded / depotDownloadCounter.ProgressEveryB);
+					if (progressConditionValue > depotDownloadCounter.ProgressLastB)
+					{
+						depotDownloadCounter.ProgressLastB = progressConditionValue);
+						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 					}
 				}
                 depotDownloadCounter.SizeDownloaded = sizeDownloaded;
