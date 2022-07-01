@@ -1,3 +1,8 @@
+Branch info
+===============
+Edit #5 was made here. It was supposed to be a temporary branch, but I decided to keep it. Should've given it a different name...
+
+
 Lanzador's fork
 ===============
 
