@@ -1,4 +1,55 @@
-DepotDownloader
+Lanzador's fork
+===============
+
+I added some edits to the original fork. Here's what I changed:
+
+Edit #1
+
+ * Added the `-apptoken` parameter that lets you specify an app token for apps that need one.
+
+Edit #2
+
+ * Fixed a mistake which caused a crash if no app token was given.
+ * Improved `-manifest-only` by copying code from version 2.4.4 of the original DepotDownloader.
+
+Unnumbered edits (I forgot to update the readme...)
+
+ * You can load a manifest - encrypted or decrypted - from a file by putting the file in the "manifests" folder and naming it "\<DepotID\>_\<ManifestID\>.manifest" or "\<DepotID\>.manifest".
+ * Fixed the tool not working because Steam removed CDN tokens.
+ * When downloading a manifest, it's saved to "manifests\downloaded" (in encrypted form, sorry).
+ * Merged this outdated fork's features with a new version of DD (Also, right now when copying the result from Lanzador/merge-dd I had to add a line to the csproj to fix some weird error). The pre-merge version can be found in the pre-merge branch.
+ * Finally fixed the fact it says "Will try to use app token given in the parameter." even if none is given.
+
+Edit #4
+
+ * `-delta-manifest` can now be used to provide a custom delta manifest instead of whatever is stored in your config file. It can accept multiple values, just like `-manifest`.
+
+Edit #5
+
+ * Added all features of this fork to DepotDownloader 2.4.6. You can now download manifests through your account again!
+ * While re-adding the changes of the original fork, got rid of some unused stuff. Also finally fixed crash when `-dir` is used before the `depots` folder is created.
+ * Removed loading manifests from "\<DepotID\>.manifest". Use the full file name. Also removed 
+ * Finally fixed the fact it says "Will try to use app token given in the parameter." even if none is given. Sounds familiar? This time for real.
+ * Added `-delta-branch` to specify branch of the old manifest if it was different for requesting the manifest code. Seems to work even without doing this, but I didn't know that until I made it. Perhaps it'll be useful someday.
+ * Now prints download time after each depot and the whole download.
+ * Use `-progress-every-s` (seconds), `-progress-every-ms` (milliseconds), `-progress-every-p` (percent) and `-progress-every-b` (bytes) with a number to get regular progress reports even if the file is large. You can use multiple of these at the same time (but only one of the first two). The third one can accept decimal numbers.
+ * Use `-free-license` to request a FreeOnDemand license if possible. This feature was removed in the original fork, but I brought it back.
+ * A separate "no app token" release is no more! Use `-depot-exists` to bypass app token. Also can be used to download workshop items by their depot ID and manifest ID.
+ * Updated original readme to v2.4.6.
+
+Oh, also, there's a compiled release here.
+
+~~The no-app-token branch is a version that lets you download depots without having the app token - I took the code from @IntriguingTiles. If using this, you must manually provide a manifest ID.~~ Removed in edit #5.
+
+
+DepotDownloader fork
+===============
+
+* added support for loading depot keys from a file (with -depotkeys commandline option)
+* changed the resulting directory structure
+
+
+DepotDownloader original readme
 ===============
 
 Steam depot downloader utilizing the SteamKit2 library. Supports .NET 6.0
