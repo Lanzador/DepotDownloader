@@ -1608,10 +1608,10 @@ namespace DepotDownloader
 						//Instead of multiplying values by 100 to get a percentage during every check, the user-provided -progress-every-p value is divided by 100 (in Program.cs).
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
 						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
-						depotDownloadCounter.ProgressLastP = Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) / depotDownloadCounter.ProgressEveryP);
+						depotDownloadCounter.ProgressLastP = (uint)Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) / depotDownloadCounter.ProgressEveryP);
 					}
-				checkoutputtime2.Stop();
-				Console.WriteLine(checkoutputtime2.ElapsedMilliseconds);
+				    checkoutputtime2.Stop();
+			    	Console.WriteLine(checkoutputtime2.ElapsedMilliseconds);
 				}
 				checkoutputtime.Stop();
 				Console.WriteLine(checkoutputtime.ElapsedMilliseconds);
