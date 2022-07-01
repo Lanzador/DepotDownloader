@@ -530,7 +530,7 @@ namespace DepotDownloader
                     Console.WriteLine("Obtained FreeOnDemand license for app {0}", appId);
 
                     // Fetch app info again in case we didn't get it fully without a license.
-                    steam3.RequestAppInfo(appId, true);
+                    steam3.RequestAppInfo(appId, Lanzador, true);
                 }
                 else
                 {
@@ -1602,17 +1602,17 @@ namespace DepotDownloader
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
 				if (depotDownloadCounter.ProgressEveryT > 0)
 				{
-					uint progressConditionValue = (uint)Math.Floor(depotDownloadCounter.DepotDownloadTime.MillisecondsElapsed / depotDownloadCounter.ProgressEveryT);
+					uint progressConditionValue = (uint)Math.Floor((float)depotDownloadCounter.DepotDownloadTime.ElapsedMilliseconds / depotDownloadCounter.ProgressEveryT);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastT)
 					{
 						depotDownloadCounter.ProgressLastT = progressConditionValue;
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
-						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 					}
 				}
 				if (depotDownloadCounter.ProgressEveryP > 0)
 				{
-					float currentPercentage = (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize);
+					float currentPercentage = sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize;
 					uint progressConditionValue = (uint)Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastP)
 					{
@@ -1624,12 +1624,12 @@ namespace DepotDownloader
 				}
 				if (depotDownloadCounter.ProgressEveryB > 0)
 				{
-					uint progressConditionValue = (uint)Math.Floor(sizeDownloaded / depotDownloadCounter.ProgressEveryB);
+					uint progressConditionValue = (uint)Math.Floor((float)sizeDownloaded / depotDownloadCounter.ProgressEveryB);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastB)
 					{
 						depotDownloadCounter.ProgressLastB = progressConditionValue;
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
-						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 					}
 				}
                 depotDownloadCounter.SizeDownloaded = sizeDownloaded;
