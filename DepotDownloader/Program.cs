@@ -1,8 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SteamKit2;
@@ -37,6 +39,9 @@ namespace DepotDownloader
                 });
 
                 var httpEventListener = new HttpDiagnosticEventListener();
+
+                DebugLog.WriteLine("DepotDownloader", "Version: {0}", Assembly.GetExecutingAssembly().GetName().Version);
+                DebugLog.WriteLine("DepotDownloader", "Runtime: {0}", RuntimeInformation.FrameworkDescription);
             }
 
             var username = GetParameter<string>(args, "-username") ?? GetParameter<string>(args, "-user");
@@ -86,9 +91,8 @@ namespace DepotDownloader
                     Console.WriteLine("Warning: Unable to load filelist: {0}", ex);
                 }
             }
-
-            string depotKeysList = GetParameter<string>(args, "-depotkeys");
-            ulong AppTokenParameter = GetParameter<ulong>(args, "-apptoken");
+			
+			string depotKeysList = GetParameter<string>(args, "-depotkeys");
 
             if (depotKeysList != null)
             {
@@ -104,10 +108,10 @@ namespace DepotDownloader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Warning: Unable to load filelist: {0}", ex.ToString());
+                    Console.WriteLine("Warning: Unable to load depot keys: {0}", ex.ToString());
                 }
             }
-            
+
             ContentDownloader.Config.InstallDirectory = GetParameter<string>(args, "-dir");
 
             ContentDownloader.Config.VerifyAll = HasParameter(args, "-verify-all") || HasParameter(args, "-verify_all") || HasParameter(args, "-validate");
@@ -124,6 +128,29 @@ namespace DepotDownloader
                 Console.WriteLine("Error: -app not specified!");
                 return 1;
             }
+			#nullable enable
+			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
+			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
+			string? deltabranch = GetParameter<string?>(args, "-delta-branch");
+			uint ProgressEveryT = 0;
+			if (HasParameter(args, "-progress-every-s"))
+			{
+				ProgressEveryT = GetParameter<uint>(args, "-progress-every-s") * 1000;
+			}
+			else if (HasParameter(args, "-progress-every-ms"))
+			{
+				ProgressEveryT = GetParameter<uint>(args, "-progress-every-ms");
+			}
+			float ProgressEveryP = GetParameter<float>(args, "-progress-every-p", 0) / 100;
+			if (ProgressEveryP < 0)
+			{
+				ProgressEveryP = 0;
+			}
+			ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
+			bool FreeLicense = HasParameter(args, "-free-license");
+			bool SkipDepotCheck = HasParameter(args, "-depot-exists");
+			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB, FreeLicense, SkipDepotCheck);
+			#nullable disable
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);
@@ -135,13 +162,12 @@ namespace DepotDownloader
                 {
                     try
                     {
-                        var deltaManifestId = GetParameterList<ulong>(args, "-delta-manifest");
-                        if (deltaManifestId.Count > 1)
+                        if (deltaManifestIds.Count > 1)
                         {
                             Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
                             return 1;
                         }
-                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile, deltaManifestId).ConfigureAwait(false);
+                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -176,13 +202,12 @@ namespace DepotDownloader
                 {
                     try
                     {
-                        var deltaManifestId = GetParameterList<ulong>(args, "-delta-manifest");
-                        if (deltaManifestId.Count > 1)
+                        if (deltaManifestIds.Count > 1)
                         {
                             Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
                             return 1;
                         }
-                        await ContentDownloader.DownloadUGCAsync(appId, ugcId, deltaManifestId).ConfigureAwait(false);
+                        await ContentDownloader.DownloadUGCAsync(appId, ugcId, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -243,12 +268,7 @@ namespace DepotDownloader
 
                 var depotIdList = GetParameterList<uint>(args, "-depot");
                 var manifestIdList = GetParameterList<ulong>(args, "-manifest");
-                var deltaManifestIdList = GetParameterList<ulong>(args, "-delta-manifest");
-                if (deltaManifestIdList.Count > 0 && depotIdList.Count != deltaManifestIdList.Count)
-                {
-                    Console.WriteLine("Error: -delta-manifest requires one id for every -depot specified");
-                    return 1;
-                }
+
                 if (manifestIdList.Count > 0)
                 {
                     if (depotIdList.Count != manifestIdList.Count)
@@ -265,11 +285,17 @@ namespace DepotDownloader
                     depotManifestIds.AddRange(depotIdList.Select(depotId => (depotId, ContentDownloader.INVALID_MANIFEST_ID)));
                 }
 
+                if (deltaManifestIds.Count > 0 && depotIdList.Count != deltaManifestIds.Count)
+                {
+                    Console.WriteLine("Error: -delta-manifest requires one id for every -depot specified");
+                    return 1;
+                }
+
                 if (InitializeSteam(username, password))
                 {
                     try
                     {
-                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, AppTokenParameter, deltaManifestIdList).ConfigureAwait(false);
+                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -318,7 +344,7 @@ namespace DepotDownloader
                     }
 
                     Console.WriteLine();
-                } while (String.Empty == password);
+                } while (string.Empty == password);
             }
             else if (username == null)
             {
@@ -423,8 +449,8 @@ namespace DepotDownloader
             Console.WriteLine();
             Console.WriteLine("\t-username <user>\t\t- the username of the account to login to for restricted content.");
             Console.WriteLine("\t-password <pass>\t\t- the password of the account to login to for restricted content.");
-            Console.WriteLine("\t-remember-password\t\t- if set, remember the password for subsequent logins of this user.");
-            Console.WriteLine("\t-depotkeys <file.txt>\t- a list of depot keys to use ('depotID;hexKey' per line)");
+            Console.WriteLine("\t-remember-password\t\t- if set, remember the password for subsequent logins of this user. (Use -username <username> -remember-password as login credentials)");
+			Console.WriteLine("\t-depotkeys <file.txt>\t- a list of depot keys to use ('depotID;hexKey' per line)");
             Console.WriteLine();
             Console.WriteLine("\t-dir <installdir>\t\t- the directory in which to place downloaded files.");
             Console.WriteLine("\t-filelist <file.txt>\t- a list of files to download (from the manifest). Prefix file path with 'regex:' if you want to match with regex.");
