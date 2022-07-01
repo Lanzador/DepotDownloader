@@ -1605,7 +1605,7 @@ namespace DepotDownloader
 					uint progressConditionValue = (uint)Math.Floor(depotDownloadCounter.DepotDownloadTime.MillisecondsElapsed / depotDownloadCounter.ProgressEveryT);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastT)
 					{
-						depotDownloadCounter.ProgressLastT = progressConditionValue);
+						depotDownloadCounter.ProgressLastT = progressConditionValue;
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
 						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 					}
@@ -1627,7 +1627,7 @@ namespace DepotDownloader
 					uint progressConditionValue = (uint)Math.Floor(sizeDownloaded / depotDownloadCounter.ProgressEveryB);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastB)
 					{
-						depotDownloadCounter.ProgressLastB = progressConditionValue);
+						depotDownloadCounter.ProgressLastB = progressConditionValue;
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
 						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 					}
