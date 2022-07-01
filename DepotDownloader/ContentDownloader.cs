@@ -63,14 +63,16 @@ namespace DepotDownloader
 
 		public class LanzadorData
 		{
+			#nullable enable
 			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
 			public string? deltabranch;
-			public int ProgressEveryT;
+			public uint ProgressEveryT;
 			public float ProgressEveryP;
-			public int ProgressEveryB;
+			public ulong ProgressEveryB;
+			#nullable disable
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, int progressT, float progressP, int progressB)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestIds = deltaids;
@@ -766,9 +768,9 @@ namespace DepotDownloader
             public ulong DepotBytesCompressed;
             public ulong DepotBytesUncompressed;
 			public Stopwatch DepotDownloadTime;
-			public int ProgressEveryS;
+			public uint ProgressEveryT;
 			public float ProgressEveryP;
-			public int ProgressEveryB;
+			public ulong ProgressEveryB;
         }
 
         private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, LanzadorData Lanzador)
@@ -798,6 +800,9 @@ namespace DepotDownloader
 
                 if (depotFileData != null)
                 {
+					depotFileData.depotCounter.ProgressEveryT = Lanzador.ProgressEveryT;
+					depotFileData.depotCounter.ProgressEveryP = Lanzador.ProgressEveryP;
+					depotFileData.depotCounter.ProgressEveryB = Lanzador.ProgressEveryB;
                     depotsToDownload.Add(depotFileData);
                     allFileNamesAllDepots.UnionWith(depotFileData.allFileNames);
                 }
@@ -833,6 +838,7 @@ namespace DepotDownloader
                 downloadCounter.TotalBytesCompressed, downloadCounter.TotalBytesUncompressed, depots.Count, totalts.Hours, totalts.Minutes, totalts.Seconds, totalts.Milliseconds);
         }
 
+        #nullable enable
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
             uint appId, DepotDownloadInfo depot, ulong deltaManifestId, string? deltabranch)
         {
@@ -1217,6 +1223,7 @@ namespace DepotDownloader
                 allFileNames = allFileNames
             };
         }
+        #nullable disable
 
         private static async Task DownloadSteam3AsyncDepotFiles(CancellationTokenSource cts, uint appId,
             GlobalDownloadCounter downloadCounter, DepotFilesData depotFilesData, HashSet<String> allFileNamesAllDepots)
@@ -1588,6 +1595,14 @@ namespace DepotDownloader
             lock (depotDownloadCounter)
             {
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
+				if (depotDownloadCounter.ProgressEveryP > 0)
+				{
+					if (Math.Floor((sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / ProgressEveryP) > Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / ProgressEveryP))
+					{
+						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, fileFinalPath, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+					}
+				}
                 depotDownloadCounter.SizeDownloaded = sizeDownloaded;
                 depotDownloadCounter.DepotBytesCompressed += chunk.CompressedLength;
                 depotDownloadCounter.DepotBytesUncompressed += chunk.UncompressedLength;
