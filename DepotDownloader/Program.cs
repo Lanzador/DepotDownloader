@@ -141,7 +141,7 @@ namespace DepotDownloader
 			{
 				ProgressEveryT = GetParameter<uint>(args, "-progress-every-ms");
 			}
-			float ProgressEveryP = GetParameter<float>(args, "-progress-every-p", 0);
+			float ProgressEveryP = GetParameter<float>(args, "-progress-every-p", 0) / 100;
 			if (ProgressEveryP < 0)
 			{
 				ProgressEveryP = 0;

@@ -758,7 +758,7 @@ namespace DepotDownloader
         {
             public ulong TotalBytesCompressed;
             public ulong TotalBytesUncompressed;
-			public Stopwatch TotalDownloadTime;
+			public Stopwatch TotalDownloadTime = new Stopwatch();
         }
 
         private class DepotDownloadCounter
@@ -767,10 +767,13 @@ namespace DepotDownloader
             public ulong SizeDownloaded;
             public ulong DepotBytesCompressed;
             public ulong DepotBytesUncompressed;
-			public Stopwatch DepotDownloadTime;
+			public Stopwatch DepotDownloadTime = new Stopwatch();
 			public uint ProgressEveryT;
 			public float ProgressEveryP;
 			public ulong ProgressEveryB;
+			public uint ProgressLastT;
+			public uint ProgressLastP;
+			public uint ProgressLastB;
         }
 
         private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, LanzadorData Lanzador)
@@ -825,7 +828,6 @@ namespace DepotDownloader
                 }
             }
 
-            downloadCounter.TotalDownloadTime = new Stopwatch();
             downloadCounter.TotalDownloadTime.Start();
             foreach (var depotFileData in depotsToDownload)
             {
@@ -1236,7 +1238,6 @@ namespace DepotDownloader
             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
             var networkChunkQueue = new ConcurrentQueue<(FileStreamData fileStreamData, ProtoManifest.FileData fileData, ProtoManifest.ChunkData chunk)>();
 
-            depotCounter.DepotDownloadTime = new Stopwatch();
             depotCounter.DepotDownloadTime.Start();
             await Util.InvokeAsync(
                 files.Select(file => new Func<Task>(async () =>
@@ -1595,15 +1596,25 @@ namespace DepotDownloader
             lock (depotDownloadCounter)
             {
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
+				Stopwatch checkoutputtime = new Stopwatch;
+				Stopwatch checkoutputtime2 = new Stopwatch;
+				checkoutputtime.Start();
 				if (depotDownloadCounter.ProgressEveryP > 0)
 				{
-					float currentPercentage = (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f;
-					if (Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP) > Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f / depotDownloadCounter.ProgressEveryP))
+					checkoutputtime2.Start();
+					float currentPercentage = (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize);
+					if (Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP) > depotDownloadCounter.ProgressLastP)
 					{
+						//Instead of multiplying values by 100 to get a percentage during every check, the user-provided -progress-every-p value is divided by 100 (in Program.cs).
 						TimeSpan tsdepot = depotDownloadCounter.DepotDownloadTime.Elapsed;
-						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
+						depotDownloadCounter.ProgressLastP = Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) / depotDownloadCounter.ProgressEveryP);
 					}
+				checkoutputtime2.Stop();
+				Console.WriteLine(checkoutputtime2.ElapsedMilliseconds);
 				}
+				checkoutputtime.Stop();
+				Console.WriteLine(checkoutputtime.ElapsedMilliseconds);
                 depotDownloadCounter.SizeDownloaded = sizeDownloaded;
                 depotDownloadCounter.DepotBytesCompressed += chunk.CompressedLength;
                 depotDownloadCounter.DepotBytesUncompressed += chunk.UncompressedLength;
