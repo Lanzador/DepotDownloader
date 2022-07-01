@@ -829,8 +829,8 @@ namespace DepotDownloader
             downloadCounter.TotalDownloadTime.Stop();
 			TimeSpan totalts = downloadCounter.TotalDownloadTime.Elapsed;
 
-            Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots in {3:00}:{4:00}:{5:00}:{6:000}",
-                downloadCounter.TotalBytesCompressed, downloadCounter.TotalBytesUncompressed, depots.Count, totalts.Hours, totalts.Minutes, totalts.Seconds, downloadCounter.TotalDownloadTime.ElapsedMilliseconds);
+            Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots in {3:00}:{4:00}:{5:00}.{6:000}",
+                downloadCounter.TotalBytesCompressed, downloadCounter.TotalBytesUncompressed, depots.Count, totalts.Hours, totalts.Minutes, totalts.Seconds, totalts.Milliseconds);
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts,
@@ -1278,8 +1278,8 @@ namespace DepotDownloader
 
 			depotCounter.DepotDownloadTime.Stop();
 			TimeSpan tsdepot = depotCounter.DepotDownloadTime.Elapsed;
-            Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}:{6:000}",
-			    depot.id, depotCounter.DepotBytesCompressed, depotCounter.DepotBytesUncompressed, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, depotCounter.DepotDownloadTime.ElapsedMilliseconds);
+            Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
+			    depot.id, depotCounter.DepotBytesCompressed, depotCounter.DepotBytesUncompressed, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
         }
 
         private static void DownloadSteam3AsyncDepotFile(
