@@ -545,7 +545,7 @@ namespace DepotDownloader
 			KeyValue depots;
             if (!Lanzador.SkipDepotCheck) depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
 
-            if (isUgc)
+            if (isUgc && !Lanzador.SkipDepotCheck)
             {
                 var workshopDepot = depots["workshopdepot"].AsUnsignedInteger();
                 if (workshopDepot != 0 && !depotIdsExpected.Contains(workshopDepot))
