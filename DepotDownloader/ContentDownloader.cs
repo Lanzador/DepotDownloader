@@ -61,16 +61,15 @@ namespace DepotDownloader
             }
         }
 
+		#nullable enable
 		public class LanzadorData
 		{
-			#nullable enable
 			public ulong? AppTokenParameter;
 			public List<ulong> deltaManifestIds;
 			public string? deltabranch;
 			public uint ProgressEveryT;
 			public float ProgressEveryP;
 			public ulong ProgressEveryB;
-			#nullable disable
 
 			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB)
 			{
@@ -82,6 +81,7 @@ namespace DepotDownloader
 				ProgressEveryB = progressB;
 			}
 		}
+		#nullable disable
 
         static bool CreateDirectories(uint depotId, uint depotVersion, string contentName, out string installDir)
         {
@@ -1596,12 +1596,8 @@ namespace DepotDownloader
             lock (depotDownloadCounter)
             {
                 sizeDownloaded = depotDownloadCounter.SizeDownloaded + (ulong)chunkData.Data.Length;
-				Stopwatch checkoutputtime = new Stopwatch();
-				Stopwatch checkoutputtime2 = new Stopwatch();
-				checkoutputtime.Start();
 				if (depotDownloadCounter.ProgressEveryP > 0)
 				{
-					checkoutputtime2.Start();
 					float currentPercentage = (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize);
 					if (Math.Floor(currentPercentage / depotDownloadCounter.ProgressEveryP) > depotDownloadCounter.ProgressLastP)
 					{
@@ -1610,11 +1606,7 @@ namespace DepotDownloader
 						Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.CompleteDownloadSize);
 						depotDownloadCounter.ProgressLastP = (uint)Math.Floor((depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) / depotDownloadCounter.ProgressEveryP);
 					}
-				    checkoutputtime2.Stop();
-			    	Console.WriteLine(checkoutputtime2.ElapsedMilliseconds);
 				}
-				checkoutputtime.Stop();
-				Console.WriteLine(checkoutputtime.ElapsedMilliseconds);
                 depotDownloadCounter.SizeDownloaded = sizeDownloaded;
                 depotDownloadCounter.DepotBytesCompressed += chunk.CompressedLength;
                 depotDownloadCounter.DepotBytesUncompressed += chunk.UncompressedLength;
