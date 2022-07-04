@@ -73,9 +73,10 @@ namespace DepotDownloader
 			public bool FreeLicense;
 			public bool SkipDepotCheck;
             public string? SentryFilePath;
+            public string? SentryFileHash;
             public bool ProgressNoFiles;
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck, string? ssfnpath, bool nofiles)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash, bool nofiles)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestIds = deltaids;
@@ -86,6 +87,7 @@ namespace DepotDownloader
 				FreeLicense = reqfree;
 				SkipDepotCheck = skipcheck;
                 SentryFilePath = ssfnpath;
+                SentryFileHash = ssfnhash;
                 ProgressNoFiles = nofiles;
 			}
 		}
