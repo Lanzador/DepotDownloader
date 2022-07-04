@@ -161,7 +161,7 @@ namespace DepotDownloader
             {
                 #region Pubfile Downloading
 
-                if (InitializeSteam(username, password))
+                if (InitializeSteam(username, password, Lanzador))
                 {
                     try
                     {
@@ -201,7 +201,7 @@ namespace DepotDownloader
             {
                 #region UGC Downloading
 
-                if (InitializeSteam(username, password))
+                if (InitializeSteam(username, password, Lanzador))
                 {
                     try
                     {
@@ -294,7 +294,7 @@ namespace DepotDownloader
                     return 1;
                 }
 
-                if (InitializeSteam(username, password))
+                if (InitializeSteam(username, password, Lanzador))
                 {
                     try
                     {
