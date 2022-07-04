@@ -149,7 +149,10 @@ namespace DepotDownloader
 			ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
 			bool FreeLicense = HasParameter(args, "-free-license");
 			bool SkipDepotCheck = HasParameter(args, "-depot-exists");
-			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB, FreeLicense, SkipDepotCheck);
+            string? SentryFilePath = GetParameter<string?>(args, "-ssfn");
+            string? SentryFileHash = GetParameter<string?>(args, "-ssfn-hash");
+			bool ProgressNoFiles = HasParameter(args, "-progress-no-files");
+			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB, FreeLicense, SkipDepotCheck, SentryFilePath, SentryFileHash, ProgressNoFiles);
 			#nullable disable
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
