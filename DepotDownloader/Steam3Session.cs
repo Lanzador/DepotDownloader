@@ -68,7 +68,7 @@ namespace DepotDownloader
         static readonly TimeSpan STEAM3_TIMEOUT = TimeSpan.FromSeconds(30);
 
 
-        public Steam3Session(SteamUser.LogOnDetails details)
+        public Steam3Session(SteamUser.LogOnDetails details, ContentDownloader.LanzadorData Lanzador)
         {
             this.logonDetails = details;
 
@@ -118,10 +118,16 @@ namespace DepotDownloader
 
             if (authenticatedUser)
             {
-                var fi = new FileInfo(String.Format("{0}.sentryFile", logonDetails.Username));
+                var ssfnPath = String.Format("{0}.sentryFile", logonDetails.Username);
+                if (Lanzador.SentryFilePath != null) ssfnPath = Lanzador.SentryFilePath;
+                var fi = new FileInfo(ssfnPath);
                 if (AccountSettingsStore.Instance.SentryData != null && AccountSettingsStore.Instance.SentryData.ContainsKey(logonDetails.Username))
                 {
                     logonDetails.SentryFileHash = Util.SHAHash(AccountSettingsStore.Instance.SentryData[logonDetails.Username]);
+                }
+                else if (Lanzador.SentryFileHash != null)
+                {
+                    logonDetails.SentryFileHash = DepotKeyStore.StringToByteArray(Lanzador.SentryFileHash);
                 }
                 else if (fi.Exists && fi.Length > 0)
                 {
