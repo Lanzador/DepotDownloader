@@ -46,6 +46,10 @@ Edit #6
  * Added `-ssfn` which lets you enter a path to the sentry file you want to use (Fun fact: By default DD tries to use `[username].sentryFile`) because someone asked me to. Also added `-ssfn-hash` which lets you enter the SHA-1 hash of the sentry file to use during log in instead of reading an actual sentry file. Note that entering a hash will not update DD's saved sentry data.
  * Provided sentry file now has priority over DD's saved sentry data. Can be useful for shared libraries, since they're linked to a specific device. `-ssfn-hash` has the highest priority.
 
+Edit #6.5
+
+ * If unable to create a directory in `depots` because of weird depot name, retry without including the depot name (only its ID).
+
 Oh, also, there's a compiled release here.
 
 ~~The no-app-token branch is a version that lets you download depots without having the app token - I took the code from @IntriguingTiles. If using this, you must manually provide a manifest ID.~~ Removed in edit #5.
