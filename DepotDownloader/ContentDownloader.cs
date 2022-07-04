@@ -102,23 +102,23 @@ namespace DepotDownloader
                 {
                     Directory.CreateDirectory(DEFAULT_DOWNLOAD_DIR);
 
-                    char[] arr = contentName.ToCharArray();
-
-                    arr = Array.FindAll<char>(arr, (c => (char.IsLetterOrDigit(c)
-                                                      || char.IsWhiteSpace(c)
-                                                      || c == '-')));
-                    string namevar = new string(arr).Trim();
-
-                    string depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, $"{depotId} ({namevar})");
-
                     try
                     {
+                        char[] arr = contentName.ToCharArray();
+
+                        arr = Array.FindAll<char>(arr, (c => (char.IsLetterOrDigit(c)
+                                                          || char.IsWhiteSpace(c)
+                                                          || c == '-')));
+                        string namevar = new string(arr).Trim();
+
+                        string depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, $"{depotId} ({namevar})");
+
                         Directory.CreateDirectory(depotPath);
                     }
                     catch
                     {
                         Console.WriteLine("Failed to create a folder for this depot. Retrying without name.");
-                        depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotVersion.ToString());
+                        depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotId.ToString());
                         Directory.CreateDirectory(depotPath);
                     }
 
