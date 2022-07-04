@@ -393,7 +393,7 @@ namespace DepotDownloader
             return depotChild["name"].AsString();
         }
 
-        public static bool InitializeSteam3(string username, string password)
+        public static bool InitializeSteam3(string username, string password, LanzadorData Lanzador)
         {
             string loginKey = null;
 
@@ -410,7 +410,7 @@ namespace DepotDownloader
                     ShouldRememberPassword = Config.RememberPassword,
                     LoginKey = loginKey,
                     LoginID = Config.LoginID ?? 0x534B32, // "SK2"
-                }
+                }, Lanzador
             );
 
             steam3Credentials = steam3.WaitForCredentials();
@@ -1641,7 +1641,7 @@ namespace DepotDownloader
 				}
 				if (depotDownloadCounter.ProgressEveryB > 0)
 				{
-					uint progressConditionValue = (ulong)Math.Floor((float)sizeDownloaded / depotDownloadCounter.ProgressEveryB);
+					ulong progressConditionValue = (ulong)Math.Floor((float)sizeDownloaded / depotDownloadCounter.ProgressEveryB);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastB)
 					{
 						depotDownloadCounter.ProgressLastB = progressConditionValue;
