@@ -102,6 +102,7 @@ namespace DepotDownloader
                 {
                     Directory.CreateDirectory(DEFAULT_DOWNLOAD_DIR);
 
+                    string depotPath;
                     try
                     {
                         char[] arr = contentName.ToCharArray();
@@ -111,14 +112,14 @@ namespace DepotDownloader
                                                           || c == '-')));
                         string namevar = new string(arr).Trim();
 
-                        string depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, $"{depotId} ({namevar})");
+                        depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, $"{depotId} ({namevar})");
 
                         Directory.CreateDirectory(depotPath);
                     }
                     catch
                     {
                         Console.WriteLine("Failed to create a folder for this depot. Retrying without name.");
-                        var depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotId.ToString());
+                        depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotId.ToString());
                         Directory.CreateDirectory(depotPath);
                     }
 
