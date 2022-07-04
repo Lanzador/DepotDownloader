@@ -329,7 +329,7 @@ namespace DepotDownloader
             return 0;
         }
 
-        static bool InitializeSteam(string username, string password)
+        static bool InitializeSteam(string username, string password, ContentDownloader.LanzadorData Lanzador)
         {
             if (username != null && password == null && (!ContentDownloader.Config.RememberPassword || !AccountSettingsStore.Instance.LoginKeys.ContainsKey(username)))
             {
@@ -357,7 +357,7 @@ namespace DepotDownloader
             // capture the supplied password in case we need to re-use it after checking the login key
             ContentDownloader.Config.SuppliedPassword = password;
 
-            return ContentDownloader.InitializeSteam3(username, password);
+            return ContentDownloader.InitializeSteam3(username, password, Lanzador);
         }
 
         static int IndexOfParam(string[] args, string param)
