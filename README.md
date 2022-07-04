@@ -33,10 +33,18 @@ Edit #5
  * Finally fixed the fact it says "Will try to use app token given in the parameter." even if none is given. Sounds familiar? This time for real.
  * Added `-delta-branch` to specify branch of the old manifest if it was different for requesting the manifest code. Seems to work even without doing this, but I didn't know that until I made it. Perhaps it'll be useful someday.
  * Now prints download time after each depot and the whole download.
- * Use `-progress-every-s` (seconds), `-progress-every-ms` (milliseconds), `-progress-every-p` (percent) or `-progress-every-b` (bytes) with a number to get regular progress reports even if the file is large. You can use multiple of these at the same time (but only one of the first two). The third one can accept decimal numbers. Checks are done after every chunk.
+ * Use `-progress-every-s` (seconds), `-progress-every-ms` (milliseconds), `-progress-every-p` (percent) or `-progress-every-b` (bytes) with a number to get regular progress reports even if the file is large. You can use multiple of these at the same time (but only one of the first two, `-s` is used if you set both). The third one can accept decimal numbers. Checks are done after every chunk.
  * Use `-free-license` to request a FreeOnDemand license if possible. This feature was removed in the original fork, but I brought it back.
  * A separate "no app token" release is no more! Use `-depot-exists` to bypass app token. Can also be used to download workshop items by their depot ID and manifest ID. (You still need to manually enter the manifest ID if using thus)
  * Updated original readme to v2.4.6.
+ 
+Edit #6
+
+ * Accepted dependabot's PR, following SteamRE's example.
+ * Changed type of `ProgressLastB` from `uint` to `ulong` so it doesn't stop showing progress after reaching `4294967295` if you set some very small value, such as `-progress-every-b 1`. (Why would you do that? Sure, it's cool, but it seems to have a negative effect on the tool's performance, at least on my potato PC.)
+ * Added `-progress-no-files` which removes per-file progress reports in case you want to only leave the `-progress-every-...` reports. Doesn't affect "Pre-allocating" and "Validating" reports, but affects the percentage reports shown when there are no chunks we need to download in a file.
+ * Added `-ssfn` which lets you enter a path to the sentry file you want to use (Fun fact: By default DD tries to use `[username].sentryFile`) because someone asked me to. Also added `-ssfn-hash` which lets you enter the SHA-1 hash of the sentry file to use during log in instead of reading an actual sentry file. Note that entering a hash will not update DD's saved sentry data.
+ * Provided sentry file now has priority over DD's saved sentry data. Can be useful for shared libraries, since they're linked to a specific device. `-ssfn-hash` has the highest priority.
 
 Oh, also, there's a compiled release here.
 
