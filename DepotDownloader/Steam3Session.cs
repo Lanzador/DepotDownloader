@@ -121,11 +121,7 @@ namespace DepotDownloader
                 var ssfnPath = String.Format("{0}.sentryFile", logonDetails.Username);
                 if (Lanzador.SentryFilePath != null) ssfnPath = Lanzador.SentryFilePath;
                 var fi = new FileInfo(ssfnPath);
-                if (AccountSettingsStore.Instance.SentryData != null && AccountSettingsStore.Instance.SentryData.ContainsKey(logonDetails.Username))
-                {
-                    logonDetails.SentryFileHash = Util.SHAHash(AccountSettingsStore.Instance.SentryData[logonDetails.Username]);
-                }
-                else if (Lanzador.SentryFileHash != null)
+                if (Lanzador.SentryFileHash != null)
                 {
                     logonDetails.SentryFileHash = DepotKeyStore.StringToByteArray(Lanzador.SentryFileHash);
                 }
@@ -135,6 +131,10 @@ namespace DepotDownloader
                     logonDetails.SentryFileHash = Util.SHAHash(sentryData);
                     AccountSettingsStore.Instance.SentryData[logonDetails.Username] = sentryData;
                     AccountSettingsStore.Save();
+                }
+                else if (AccountSettingsStore.Instance.SentryData != null && AccountSettingsStore.Instance.SentryData.ContainsKey(logonDetails.Username))
+                {
+                    logonDetails.SentryFileHash = Util.SHAHash(AccountSettingsStore.Instance.SentryData[logonDetails.Username]);
                 }
             }
 
