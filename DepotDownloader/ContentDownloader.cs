@@ -118,7 +118,7 @@ namespace DepotDownloader
                     catch
                     {
                         Console.WriteLine("Failed to create a folder for this depot. Retrying without name.");
-                        depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotId.ToString());
+                        var depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotId.ToString());
                         Directory.CreateDirectory(depotPath);
                     }
 
