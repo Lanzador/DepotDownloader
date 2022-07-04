@@ -109,8 +109,18 @@ namespace DepotDownloader
                                                       || c == '-')));
                     string namevar = new string(arr).Trim();
 
-                    string depotPath = Path.Combine( DEFAULT_DOWNLOAD_DIR, $"{depotId} ({namevar})" );
-                    Directory.CreateDirectory(depotPath);
+                    string depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, $"{depotId} ({namevar})");
+
+                    try
+                    {
+                        Directory.CreateDirectory(depotPath);
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Failed to create a folder for this depot. Retrying without name.");
+                        depotPath = Path.Combine(DEFAULT_DOWNLOAD_DIR, depotVersion.ToString());
+                        Directory.CreateDirectory(depotPath);
+                    }
 
                     installDir = Path.Combine(depotPath, depotVersion.ToString());
                     Directory.CreateDirectory(installDir);
@@ -731,10 +741,7 @@ namespace DepotDownloader
                 depotKey = steam3.DepotKeys[depotId];
             }
 			
-			if (!Directory.Exists("depots"))
-			{
-				Directory.CreateDirectory("depots");
-			}
+			Directory.CreateDirectory("depots");
             File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
 
             return new DepotDownloadInfo(depotId, containingAppId, manifestId, branch, installDir, contentName, depotKey);
