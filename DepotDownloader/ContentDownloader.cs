@@ -72,8 +72,10 @@ namespace DepotDownloader
 			public ulong ProgressEveryB;
 			public bool FreeLicense;
 			public bool SkipDepotCheck;
+            public string? SentryFilePath;
+            public bool ProgressNoFiles;
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck)
+			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck, string? ssfnpath, bool nofiles)
 			{
 				AppTokenParameter = apptoken;
 				deltaManifestIds = deltaids;
@@ -83,6 +85,8 @@ namespace DepotDownloader
 				ProgressEveryB = progressB;
 				FreeLicense = reqfree;
 				SkipDepotCheck = skipcheck;
+                SentryFilePath = ssfnpath;
+                ProgressNoFiles = nofiles;
 			}
 		}
 		#nullable disable
@@ -783,7 +787,8 @@ namespace DepotDownloader
 			public ulong ProgressEveryB;
 			public uint ProgressLastT;
 			public uint ProgressLastP;
-			public uint ProgressLastB;
+			public ulong ProgressLastB;
+            public bool ProgressNoFiles;
         }
 
         private static async Task DownloadSteam3Async(uint appId, List<DepotDownloadInfo> depots, LanzadorData Lanzador)
@@ -816,6 +821,7 @@ namespace DepotDownloader
 					depotFileData.depotCounter.ProgressEveryT = Lanzador.ProgressEveryT;
 					depotFileData.depotCounter.ProgressEveryP = Lanzador.ProgressEveryP;
 					depotFileData.depotCounter.ProgressEveryB = Lanzador.ProgressEveryB;
+					depotFileData.depotCounter.ProgressNoFiles = Lanzador.ProgressNoFiles;
                     depotsToDownload.Add(depotFileData);
                     allFileNamesAllDepots.UnionWith(depotFileData.allFileNames);
                 }
@@ -1461,7 +1467,10 @@ namespace DepotDownloader
                     lock (depotDownloadCounter)
                     {
                         depotDownloadCounter.SizeDownloaded += file.TotalSize;
-                        Console.WriteLine("{0,6:#00.00}% {1}", (depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, fileFinalPath);
+                        if (!depotDownloadCounter.ProgressNoFiles)
+                        {
+                            Console.WriteLine("{0,6:#00.00}% {1}", (depotDownloadCounter.SizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, fileFinalPath);
+                        }
                     }
 
                     return;
@@ -1630,7 +1639,7 @@ namespace DepotDownloader
 				}
 				if (depotDownloadCounter.ProgressEveryB > 0)
 				{
-					uint progressConditionValue = (uint)Math.Floor((float)sizeDownloaded / depotDownloadCounter.ProgressEveryB);
+					uint progressConditionValue = (ulong)Math.Floor((float)sizeDownloaded / depotDownloadCounter.ProgressEveryB);
 					if (progressConditionValue > depotDownloadCounter.ProgressLastB)
 					{
 						depotDownloadCounter.ProgressLastB = progressConditionValue;
@@ -1652,7 +1661,10 @@ namespace DepotDownloader
             if (remainingChunks == 0)
             {
                 var fileFinalPath = Path.Combine(depot.installDir, file.FileName);
-                Console.WriteLine("{0,6:#00.00}% {1}", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, fileFinalPath);
+                if (!depotDownloadCounter.ProgressNoFiles)
+                {
+                    Console.WriteLine("{0,6:#00.00}% {1}", (sizeDownloaded / (float)depotDownloadCounter.CompleteDownloadSize) * 100.0f, fileFinalPath);
+                }
             }
         }
 
