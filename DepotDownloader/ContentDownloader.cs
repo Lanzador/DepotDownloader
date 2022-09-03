@@ -262,20 +262,6 @@ namespace DepotDownloader
             return uint.Parse(buildid.Value);
         }
 
-        static uint GetSteam3DepotProxyAppId(uint depotId, uint appId)
-        {
-            var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
-            var depotChild = depots[depotId.ToString()];
-
-            if (depotChild == KeyValue.Invalid)
-                return INVALID_APP_ID;
-
-            if (depotChild["depotfromapp"] == KeyValue.Invalid)
-                return INVALID_APP_ID;
-
-            return depotChild["depotfromapp"].AsUnsignedInteger();
-        }
-
         static ulong GetSteam3DepotManifest(uint depotId, uint appId, string branch, LanzadorData Lanzador)
         {
             var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
@@ -702,15 +688,6 @@ namespace DepotDownloader
                 }
             }
 
-            // For depots that are proxied through depotfromapp, we still need to resolve the proxy app id
-            var containingAppId = appId;
-			
-			if (!Lanzador.SkipDepotCheck)
-			{
-                var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
-                if (proxyAppId != INVALID_APP_ID) containingAppId = proxyAppId;
-		    }
-
             if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
             {
                 Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
@@ -745,7 +722,7 @@ namespace DepotDownloader
 			Directory.CreateDirectory("depots");
             File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
 
-            return new DepotDownloadInfo(depotId, containingAppId, manifestId, branch, installDir, contentName, depotKey);
+            return new DepotDownloadInfo(depotId, appId, manifestId, branch, installDir, contentName, depotKey);
         }
 
         private class ChunkMatch
