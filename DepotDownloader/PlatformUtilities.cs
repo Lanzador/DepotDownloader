@@ -11,7 +11,7 @@ namespace DepotDownloader
         private const int ModeExecute = ModeExecuteOwner | ModeExecuteGroup | ModeExecuteOther;
 
         [StructLayout(LayoutKind.Explicit, Size = 144)]
-        private readonly struct StatLinux64
+        private readonly struct StatLinuxX64
         {
             [FieldOffset(24)] public readonly uint st_mode;
         }
