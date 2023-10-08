@@ -651,7 +651,7 @@ namespace DepotDownloader
                 return null;
             }
 
-            byte[] depotKey
+            byte[] depotKey;
 
             if (DepotKeyStore.ContainsKey(depotId))
             {
