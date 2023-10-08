@@ -642,7 +642,7 @@ namespace DepotDownloader
 
             if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
             {
-                Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
+                Console.WriteLine("Depot {0} is not available from this account and no key found in depot key store.", depotId);
                 return null;
             }
             string installDir;
@@ -652,13 +652,13 @@ namespace DepotDownloader
                 return null;
             }
 
-            var depotKey = steam3.DepotKeys[depotId];
-            byte[] depotKey;
+            byte[] depotKey
 
-            if(DepotKeyStore.ContainsKey(depotId))
+            if (DepotKeyStore.ContainsKey(depotId))
             {
                 depotKey = DepotKeyStore.Get(depotId);
-            } else
+            }
+            else
             {
                 steam3.RequestDepotKey(depotId, appId);
                 if (!steam3.DepotKeys.ContainsKey(depotId))
