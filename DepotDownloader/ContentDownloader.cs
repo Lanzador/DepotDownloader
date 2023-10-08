@@ -57,37 +57,37 @@ namespace DepotDownloader
             }
         }
 
-		#nullable enable
-		public class LanzadorData
-		{
-			public ulong? AppTokenParameter;
-			public List<ulong> deltaManifestIds;
-			public string? deltabranch;
-			public uint ProgressEveryT;
-			public float ProgressEveryP;
-			public ulong ProgressEveryB;
-			public bool FreeLicense;
-			public bool SkipDepotCheck;
+        #nullable enable
+        public class LanzadorData
+        {
+            public ulong? AppTokenParameter;
+            public List<ulong> deltaManifestIds;
+            public string? deltabranch;
+            public uint ProgressEveryT;
+            public float ProgressEveryP;
+            public ulong ProgressEveryB;
+            public bool FreeLicense;
+            public bool SkipDepotCheck;
             public string? SentryFilePath;
             public string? SentryFileHash;
             public bool ProgressNoFiles;
 
-			public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash, bool nofiles)
-			{
-				AppTokenParameter = apptoken;
-				deltaManifestIds = deltaids;
-				deltabranch = deltabr;
-				ProgressEveryT = progressT;
-				ProgressEveryP = progressP;
-				ProgressEveryB = progressB;
-				FreeLicense = reqfree;
-				SkipDepotCheck = skipcheck;
+            public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash, bool nofiles)
+            {
+                AppTokenParameter = apptoken;
+                deltaManifestIds = deltaids;
+                deltabranch = deltabr;
+                ProgressEveryT = progressT;
+                ProgressEveryP = progressP;
+                ProgressEveryB = progressB;
+                FreeLicense = reqfree;
+                SkipDepotCheck = skipcheck;
                 SentryFilePath = ssfnpath;
                 SentryFileHash = ssfnhash;
                 ProgressNoFiles = nofiles;
-			}
-		}
-		#nullable disable
+            }
+        }
+        #nullable disable
 
         static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
@@ -668,7 +668,7 @@ namespace DepotDownloader
                 depotKey = steam3.DepotKeys[depotId];
             }
 
-			Directory.CreateDirectory("depots");
+            Directory.CreateDirectory("depots");
             File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
 
             return new DepotDownloadInfo(depotId, appId, manifestId, branch, installDir, depotKey);
@@ -868,7 +868,7 @@ namespace DepotDownloader
 
                             // In order to download this manifest, we need the current manifest request code
                             // The manifest request code is only valid for a specific period in time
-                            if (manifestRequestCode == 0 || now >= manifestRequestCodeExpiration)
+                            if ((manifestRequestCode == 0 || now >= manifestRequestCodeExpiration) && !File.Exists(String.Format("manifests\\{0}_{1}.manifest", depot.id, depot.manifestId)))
                             {
                                 manifestRequestCode = await steam3.GetDepotManifestRequestCodeAsync(
                                     depot.id,
