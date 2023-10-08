@@ -630,7 +630,7 @@ namespace DepotDownloader
                 }
             }
 
-            if (DepotKeyStore.ContainsKey(depotId) && !steam3.DepotKeys.ContainsKey(depotId))
+            if (!DepotKeyStore.ContainsKey(depotId) && !steam3.DepotKeys.ContainsKey(depotId))
             {
                 Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
                 return null;
