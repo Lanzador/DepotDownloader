@@ -630,8 +630,7 @@ namespace DepotDownloader
                 }
             }
 
-            steam3.RequestDepotKey(depotId, appId);
-            if (!DepotKeyStore.ContainsKey(depotId) && !steam3.DepotKeys.ContainsKey(depotId))
+            if (DepotKeyStore.ContainsKey(depotId) && !steam3.DepotKeys.ContainsKey(depotId))
             {
                 Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
                 return null;
@@ -639,12 +638,12 @@ namespace DepotDownloader
 
             var uVersion = GetSteam3AppBuildNumber(appId, branch);
 
-
             if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
             {
                 Console.WriteLine("Depot {0} is not available from this account and no key found in depot key store.", depotId);
                 return null;
             }
+
             string installDir;
             if (!CreateDirectories(depotId, uVersion, out installDir))
             {
@@ -652,7 +651,7 @@ namespace DepotDownloader
                 return null;
             }
 
-            byte[] depotKey;
+            byte[] depotKey
 
             if (DepotKeyStore.ContainsKey(depotId))
             {
