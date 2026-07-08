@@ -122,7 +122,7 @@ namespace DepotDownloader
             }
         }
 
-        public static DepotManifest LoadManifestFromFile(string directory, uint depotId, ulong manifestId, bool badHashWarning)
+        public static DepotManifest LoadManifestFromFile(string directory, uint depotId, ulong manifestId, bool badHashWarning, bool ignoreChecksum=false)
         {
             // Try loading Steam format manifest first.
             var filename = Path.Combine(directory, string.Format("{0}_{1}.manifest", depotId, manifestId));
@@ -142,7 +142,7 @@ namespace DepotDownloader
 
                 var currentChecksum = FileSHAHash(filename);
 
-                if (expectedChecksum != null && expectedChecksum.SequenceEqual(currentChecksum))
+                if (ignoreChecksum || (expectedChecksum != null && expectedChecksum.SequenceEqual(currentChecksum)))
                 {
                     return DepotManifest.LoadFromFile(filename);
                 }
