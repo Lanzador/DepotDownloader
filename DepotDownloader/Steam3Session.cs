@@ -140,7 +140,7 @@ namespace DepotDownloader
             }
         }
 
-        public async Task RequestAppInfo(uint appId, LanzadorData Lanzador, bool bForce = false)
+        public async Task RequestAppInfo(uint appId, ContentDownloader.LanzadorData Lanzador, bool bForce = false)
         {
             if ((AppInfo.ContainsKey(appId) && !bForce) || bAborted)
                 return;
