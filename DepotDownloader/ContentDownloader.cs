@@ -586,14 +586,14 @@ namespace DepotDownloader
                 }
             }
 
-            if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(appId, depotId))
+            if (!DepotKeyStore.ContainsKey(depotId) && !await AccountHasAccess(appId, depotId))
             {
-                Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
+                Console.WriteLine("Depot {0} is not available from this account and no key found in depot key store.", depotId);
                 return null;
             }
 
             byte[] depotKey;
-            
+
             if (DepotKeyStore.ContainsKey(depotId))
             {
                 depotKey = DepotKeyStore.Get(depotId);
@@ -601,7 +601,7 @@ namespace DepotDownloader
             else
             {
                 await steam3.RequestDepotKey(depotId, appId);
-                if (!steam3.DepotKeys.TryGetValue(depotId, out var depotKey))
+                if (!steam3.DepotKeys.TryGetValue(depotId, out depotKey))
                 {
                     Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
                     return null;
