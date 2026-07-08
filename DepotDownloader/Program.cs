@@ -186,6 +186,8 @@ namespace DepotDownloader
                 return 1;
             }
 
+			#nullable enable
+			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
             uint ProgressEveryT = 0;
             if (HasParameter(args, "-progress-every-s"))
             {
@@ -202,7 +204,8 @@ namespace DepotDownloader
             }
             ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
             bool ProgressNoFiles = HasParameter(args, "-progress-no-files");
-            ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(ProgressEveryT, ProgressEveryP, ProgressEveryB, ProgressNoFiles);
+            ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, ProgressEveryT, ProgressEveryP, ProgressEveryB, ProgressNoFiles);
+            #nullable disable
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);

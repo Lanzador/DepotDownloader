@@ -50,7 +50,7 @@ namespace DepotDownloader
 
 		public class LanzadorData
 		{
-			//public ulong? AppTokenParameter;
+			public ulong? AppTokenParameter;
 			//public List<ulong> deltaManifestIds;
 			//public string? deltabranch;
 			public uint ProgressEveryT;
@@ -63,9 +63,9 @@ namespace DepotDownloader
             //public string? SentryFileHash;
 
 			//public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
-			public LanzadorData(uint progressT, float progressP, ulong progressB, bool nofiles)
+			public LanzadorData(ulong? apptoken, uint progressT, float progressP, ulong progressB, bool nofiles)
 			{
-				//AppTokenParameter = apptoken;
+				AppTokenParameter = apptoken;
 				//deltaManifestIds = deltaids;
 				//deltabranch = deltabr;
 				ProgressEveryT = progressT;

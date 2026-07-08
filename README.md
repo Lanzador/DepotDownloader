@@ -15,6 +15,8 @@ AppID;KEY
 
 - Prints download time
 
+- Use `-apptoken` to manually pass an app token
+
 
 DepotDownloader
 ===============
