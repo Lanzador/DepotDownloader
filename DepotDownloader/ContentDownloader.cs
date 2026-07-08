@@ -756,6 +756,10 @@ namespace DepotDownloader
             else
             {
                 newManifest = Util.LoadManifestFromFile(configDir, depot.DepotId, depot.ManifestId, true);
+                if (newManifest == null)
+                {
+                    newManifest = Util.LoadManifestFromFile("manifests", depot.DepotId, depot.ManifestId, false);
+                }
 
                 if (newManifest != null)
                 {
