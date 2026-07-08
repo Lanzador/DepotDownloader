@@ -423,7 +423,7 @@ namespace DepotDownloader
 
             await steam3?.RequestAppInfo(appId);
 
-            if (!await AccountHasAccess(appId, appId))
+            /*if (!await AccountHasAccess(appId, appId))
             {
                 if (steam3.steamUser.SteamID.AccountType != EAccountType.AnonUser && await steam3.RequestFreeAppLicense(appId))
                 {
@@ -437,7 +437,7 @@ namespace DepotDownloader
                     var contentName = GetAppName(appId);
                     throw new ContentDownloaderException(string.Format("App {0} ({1}) is not available from this account.", appId, contentName));
                 }
-            }
+            }*/
 
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
@@ -562,12 +562,12 @@ namespace DepotDownloader
                 await steam3.RequestAppInfo(appId);
             }
 
-            if (!await AccountHasAccess(appId, depotId))
+            /*if (!await AccountHasAccess(appId, depotId))
             {
                 Console.WriteLine("Depot {0} is not available from this account.", depotId);
 
                 return null;
-            }
+            }*/
 
             if (manifestId == INVALID_MANIFEST_ID)
             {
@@ -586,12 +586,29 @@ namespace DepotDownloader
                 }
             }
 
-            await steam3.RequestDepotKey(depotId, appId);
-            if (!steam3.DepotKeys.TryGetValue(depotId, out var depotKey))
+            if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
             {
-                Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
+                Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
                 return null;
             }
+
+            byte[] depotKey;
+            
+            if (DepotKeyStore.ContainsKey(depotId))
+            {
+                depotKey = DepotKeyStore.Get(depotId);
+            }
+            else
+            {
+                await steam3.RequestDepotKey(depotId, appId);
+                if (!steam3.DepotKeys.TryGetValue(depotId, out var depotKey))
+                {
+                    Console.WriteLine("No valid depot key for {0}, unable to download.", depotId);
+                    return null;
+                }
+            }
+
+            File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
 
             var uVersion = GetSteam3AppBuildNumber(appId, branch);
 

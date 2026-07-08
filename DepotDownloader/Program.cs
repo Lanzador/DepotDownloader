@@ -134,6 +134,26 @@ namespace DepotDownloader
                 }
             }
 
+            string depotKeysList = GetParameter<string>(args, "-depotkeys");
+
+            if (depotKeysList != null)
+            {
+                try
+                {
+                    string depotKeysListData = File.ReadAllText(depotKeysList);
+                    string[] lines = depotKeysListData.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                    DepotKeyStore.AddAll(lines);
+
+                   
+                    Console.WriteLine("Using depot keys from '{0}'.", depotKeysList);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Warning: Unable to load filelist: {0}", ex.ToString());
+                }
+            }
+
             ContentDownloader.Config.InstallDirectory = GetParameter<string>(args, "-dir");
 
             ContentDownloader.Config.VerifyAll = HasParameter(args, "-verify-all") || HasParameter(args, "-verify_all") || HasParameter(args, "-validate");
@@ -515,6 +535,7 @@ namespace DepotDownloader
             Console.WriteLine("  -username <user>         - the username of the account to login to for restricted content.");
             Console.WriteLine("  -password <pass>         - the password of the account to login to for restricted content.");
             Console.WriteLine("  -remember-password       - if set, remember the password for subsequent logins of this user.");
+            Console.WriteLine("  -depotkeys <file.txt>    - a list of depot keys to use ('depotID;hexKey' per line)");
             Console.WriteLine("                             use -username <username> -remember-password as login credentials.");
             Console.WriteLine("  -qr                      - display a login QR code to be scanned with the Steam mobile app");
             Console.WriteLine("  -no-mobile               - prefer entering a 2FA code instead of prompting to accept in the Steam mobile app");
