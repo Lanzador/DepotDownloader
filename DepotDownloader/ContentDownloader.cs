@@ -50,32 +50,32 @@ namespace DepotDownloader
 
 		public class LanzadorData
 		{
-			#public ulong? AppTokenParameter;
-			#public List<ulong> deltaManifestIds;
-			#public string? deltabranch;
+			//public ulong? AppTokenParameter;
+			//public List<ulong> deltaManifestIds;
+			//public string? deltabranch;
 			public uint ProgressEveryT;
 			public float ProgressEveryP;
 			public ulong ProgressEveryB;
             public bool ProgressNoFiles;
-			#public bool FreeLicense;
-			#public bool SkipDepotCheck;
-            #public string? SentryFilePath;
-            #public string? SentryFileHash;
+			//public bool FreeLicense;
+			//public bool SkipDepotCheck;
+            //public string? SentryFilePath;
+            //public string? SentryFileHash;
 
-			#public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
+			//public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
 			public LanzadorData(uint progressT, float progressP, ulong progressB, bool nofiles)
 			{
-				#AppTokenParameter = apptoken;
-				#deltaManifestIds = deltaids;
-				#deltabranch = deltabr;
+				//AppTokenParameter = apptoken;
+				//deltaManifestIds = deltaids;
+				//deltabranch = deltabr;
 				ProgressEveryT = progressT;
 				ProgressEveryP = progressP;
 				ProgressEveryB = progressB;
                 ProgressNoFiles = nofiles;
-				#FreeLicense = reqfree;
-				#SkipDepotCheck = skipcheck;
-                #SentryFilePath = ssfnpath;
-                #SentryFileHash = ssfnhash;
+				//FreeLicense = reqfree;
+				//SkipDepotCheck = skipcheck;
+                //SentryFilePath = ssfnpath;
+                //SentryFileHash = ssfnhash;
 			}
 		}
 
