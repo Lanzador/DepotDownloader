@@ -732,15 +732,10 @@ namespace DepotDownloader
 
                 if (depotFileData != null)
                 {
-                if (depotFileData != null)
-                {
                     depotFileData.depotCounter.progressEveryT = Lanzador.ProgressEveryT;
                     depotFileData.depotCounter.progressEveryP = Lanzador.ProgressEveryP;
                     depotFileData.depotCounter.progressEveryB = Lanzador.ProgressEveryB;
                     depotFileData.depotCounter.progressNoFiles = Lanzador.ProgressNoFiles;
-                    depotsToDownload.Add(depotFileData);
-                    allFileNamesAllDepots.UnionWith(depotFileData.allFileNames);
-                }
                     depotsToDownload.Add(depotFileData);
                     allFileNamesAllDepots.UnionWith(depotFileData.allFileNames);
                 }
