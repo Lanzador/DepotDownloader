@@ -586,7 +586,7 @@ namespace DepotDownloader
                 }
             }
 
-            if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(depotId))
+            if (!DepotKeyStore.ContainsKey(depotId) && !AccountHasAccess(appId, depotId))
             {
                 Console.WriteLine("Depot {0} ({1}) is not available from this account and no key found in depot key store.", depotId, contentName);
                 return null;
