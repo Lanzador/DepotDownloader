@@ -186,6 +186,24 @@ namespace DepotDownloader
                 return 1;
             }
 
+            uint ProgressEveryT = 0;
+            if (HasParameter(args, "-progress-every-s"))
+            {
+                ProgressEveryT = GetParameter<uint>(args, "-progress-every-s") * 1000;
+            }
+            else if (HasParameter(args, "-progress-every-ms"))
+            {
+                ProgressEveryT = GetParameter<uint>(args, "-progress-every-ms");
+            }
+            float ProgressEveryP = GetParameter<float>(args, "-progress-every-p", 0) / 100;
+            if (ProgressEveryP < 0)
+            {
+                ProgressEveryP = 0;
+            }
+            ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
+            bool ProgressNoFiles = HasParameter(args, "-progress-no-files");
+            ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(ProgressEveryT, ProgressEveryP, ProgressEveryB, ProgressNoFiles);
+
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);
             if (pubFile != ContentDownloader.INVALID_MANIFEST_ID)
@@ -194,11 +212,11 @@ namespace DepotDownloader
 
                 PrintUnconsumedArgs(args);
 
-                if (InitializeSteam(username, password))
+                if (InitializeSteam(username, password, Lanzador))
                 {
                     try
                     {
-                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile).ConfigureAwait(false);
+                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -231,11 +249,11 @@ namespace DepotDownloader
 
                 PrintUnconsumedArgs(args);
 
-                if (InitializeSteam(username, password))
+                if (InitializeSteam(username, password, Lanzador))
                 {
                     try
                     {
-                        await ContentDownloader.DownloadUGCAsync(appId, ugcId).ConfigureAwait(false);
+                        await ContentDownloader.DownloadUGCAsync(appId, ugcId, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -329,11 +347,11 @@ namespace DepotDownloader
 
                 PrintUnconsumedArgs(args);
 
-                if (InitializeSteam(username, password))
+                if (InitializeSteam(username, password, Lanzador))
                 {
                     try
                     {
-                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC).ConfigureAwait(false);
+                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, Lanzador).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -364,7 +382,7 @@ namespace DepotDownloader
             return 0;
         }
 
-        static bool InitializeSteam(string username, string password)
+        static bool InitializeSteam(string username, string password, ContentDownloader.LanzadorData Lanzador)
         {
             if (!ContentDownloader.Config.UseQrCode)
             {
@@ -412,7 +430,7 @@ namespace DepotDownloader
                 }
             }
 
-            return ContentDownloader.InitializeSteam3(username, password);
+            return ContentDownloader.InitializeSteam3(username, password, Lanzador);
         }
 
         static int IndexOfParam(string[] args, string param)

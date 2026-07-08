@@ -48,6 +48,37 @@ namespace DepotDownloader
             public byte[] DepotKey { get; } = depotKey;
         }
 
+		public class LanzadorData
+		{
+			#public ulong? AppTokenParameter;
+			#public List<ulong> deltaManifestIds;
+			#public string? deltabranch;
+			public uint ProgressEveryT;
+			public float ProgressEveryP;
+			public ulong ProgressEveryB;
+            public bool ProgressNoFiles;
+			#public bool FreeLicense;
+			#public bool SkipDepotCheck;
+            #public string? SentryFilePath;
+            #public string? SentryFileHash;
+
+			#public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
+			public LanzadorData(uint progressT, float progressP, ulong progressB, bool nofiles)
+			{
+				#AppTokenParameter = apptoken;
+				#deltaManifestIds = deltaids;
+				#deltabranch = deltabr;
+				ProgressEveryT = progressT;
+				ProgressEveryP = progressP;
+				ProgressEveryB = progressB;
+                ProgressNoFiles = nofiles;
+				#FreeLicense = reqfree;
+				#SkipDepotCheck = skipcheck;
+                #SentryFilePath = ssfnpath;
+                #SentryFileHash = ssfnhash;
+			}
+		}
+
         static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
             installDir = null;
@@ -204,7 +235,7 @@ namespace DepotDownloader
             return depotChild["depotfromapp"].AsUnsignedInteger();
         }
 
-        static async Task<ulong> GetSteam3DepotManifest(uint depotId, uint appId, string branch)
+        static async Task<ulong> GetSteam3DepotManifest(uint depotId, uint appId, string branch, LanzadorData Lanzador)
         {
             var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
             var depotChild = depots[depotId.ToString()];
@@ -226,9 +257,9 @@ namespace DepotDownloader
                     return INVALID_MANIFEST_ID;
                 }
 
-                await steam3.RequestAppInfo(otherAppId);
+                await steam3.RequestAppInfo(otherAppId, Lanzador);
 
-                return await GetSteam3DepotManifest(depotId, otherAppId, branch);
+                return await GetSteam3DepotManifest(depotId, otherAppId, branch, Lanzador);
             }
 
             var manifests = depotChild["manifests"];
@@ -297,7 +328,7 @@ namespace DepotDownloader
             return info["name"].AsString();
         }
 
-        public static bool InitializeSteam3(string username, string password)
+        public static bool InitializeSteam3(string username, string password, LanzadorData Lanzador)
         {
             string loginToken = null;
 
@@ -336,7 +367,7 @@ namespace DepotDownloader
             steam3.Disconnect();
         }
 
-        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId)
+        public static async Task DownloadPubfileAsync(uint appId, ulong publishedFileId, LanzadorData Lanzador)
         {
             var details = await steam3.GetPublishedFileDetails(appId, publishedFileId);
 
@@ -346,7 +377,7 @@ namespace DepotDownloader
             }
             else if (details?.hcontent_file > 0)
             {
-                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true);
+                await DownloadAppAsync(appId, new List<(uint, ulong)> { (appId, details.hcontent_file) }, DEFAULT_BRANCH, null, null, null, false, true, Lanzador);
             }
             else
             {
@@ -354,7 +385,7 @@ namespace DepotDownloader
             }
         }
 
-        public static async Task DownloadUGCAsync(uint appId, ulong ugcId)
+        public static async Task DownloadUGCAsync(uint appId, ulong ugcId, LanzadorData Lanzador)
         {
             SteamCloud.UGCDetailsCallback details = null;
 
@@ -373,7 +404,7 @@ namespace DepotDownloader
             }
             else
             {
-                await DownloadAppAsync(appId, [(appId, ugcId)], DEFAULT_BRANCH, null, null, null, false, true);
+                await DownloadAppAsync(appId, [(appId, ugcId)], DEFAULT_BRANCH, null, null, null, false, true, Lanzador);
             }
         }
 
@@ -408,7 +439,7 @@ namespace DepotDownloader
             File.Move(fileStagingPath, fileFinalPath);
         }
 
-        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc)
+        public static async Task DownloadAppAsync(uint appId, List<(uint depotId, ulong manifestId)> depotManifestIds, string branch, string os, string arch, string language, bool lv, bool isUgc, LanzadorData Lanzador)
         {
             cdnPool = new CDNClientPool(steam3, appId);
 
@@ -422,7 +453,7 @@ namespace DepotDownloader
             Directory.CreateDirectory(Path.Combine(configPath, CONFIG_DIR));
             DepotConfigStore.LoadFromFile(Path.Combine(configPath, CONFIG_DIR, "depot.config"));
 
-            await steam3?.RequestAppInfo(appId);
+            await steam3?.RequestAppInfo(appId, Lanzador);
 
             /*if (!await AccountHasAccess(appId, appId))
             {
@@ -431,7 +462,7 @@ namespace DepotDownloader
                     Console.WriteLine("Obtained FreeOnDemand license for app {0}", appId);
 
                     // Fetch app info again in case we didn't get it fully without a license.
-                    await steam3.RequestAppInfo(appId, true);
+                    await steam3.RequestAppInfo(appId, Lanzador, true);
                 }
                 else
                 {
@@ -536,7 +567,7 @@ namespace DepotDownloader
 
             foreach (var (depotId, manifestId) in depotManifestIds)
             {
-                var info = await GetDepotInfo(depotId, appId, manifestId, branch);
+                var info = await GetDepotInfo(depotId, appId, manifestId, branch, Lanzador);
                 if (info != null)
                 {
                     infos.Add(info);
@@ -547,7 +578,7 @@ namespace DepotDownloader
 
             try
             {
-                await DownloadSteam3Async(infos).ConfigureAwait(false);
+                await DownloadSteam3Async(infos, Lanzador).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -556,11 +587,11 @@ namespace DepotDownloader
             }
         }
 
-        static async Task<DepotDownloadInfo> GetDepotInfo(uint depotId, uint appId, ulong manifestId, string branch)
+        static async Task<DepotDownloadInfo> GetDepotInfo(uint depotId, uint appId, ulong manifestId, string branch, LanzadorData Lanzador)
         {
             if (steam3 != null && appId != INVALID_APP_ID)
             {
-                await steam3.RequestAppInfo(appId);
+                await steam3.RequestAppInfo(appId, Lanzador);
             }
 
             /*if (!await AccountHasAccess(appId, depotId))
@@ -572,12 +603,12 @@ namespace DepotDownloader
 
             if (manifestId == INVALID_MANIFEST_ID)
             {
-                manifestId = await GetSteam3DepotManifest(depotId, appId, branch);
+                manifestId = await GetSteam3DepotManifest(depotId, appId, branch, Lanzador);
                 if (manifestId == INVALID_MANIFEST_ID && !string.Equals(branch, DEFAULT_BRANCH, StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine("Warning: Depot {0} does not have branch named \"{1}\". Trying {2} branch.", depotId, branch, DEFAULT_BRANCH);
                     branch = DEFAULT_BRANCH;
-                    manifestId = await GetSteam3DepotManifest(depotId, appId, branch);
+                    manifestId = await GetSteam3DepotManifest(depotId, appId, branch, Lanzador);
                 }
 
                 if (manifestId == INVALID_MANIFEST_ID)
@@ -674,9 +705,16 @@ namespace DepotDownloader
             public ulong depotBytesCompressed;
             public ulong depotBytesUncompressed;
             public Stopwatch depotDownloadTime = new Stopwatch();
+            public uint progressEveryT;
+            public float progressEveryP;
+            public ulong progressEveryB;
+            public uint progressLastT;
+            public uint progressLastP;
+            public ulong progressLastB;
+            public bool progressNoFiles;
         }
 
-        private static async Task DownloadSteam3Async(List<DepotDownloadInfo> depots)
+        private static async Task DownloadSteam3Async(List<DepotDownloadInfo> depots, LanzadorData Lanzador)
         {
             Ansi.Progress(Ansi.ProgressState.Indeterminate);
 
@@ -694,6 +732,15 @@ namespace DepotDownloader
 
                 if (depotFileData != null)
                 {
+                if (depotFileData != null)
+                {
+                    depotFileData.depotCounter.progressEveryT = Lanzador.ProgressEveryT;
+                    depotFileData.depotCounter.progressEveryP = Lanzador.ProgressEveryP;
+                    depotFileData.depotCounter.progressEveryB = Lanzador.ProgressEveryB;
+                    depotFileData.depotCounter.progressNoFiles = Lanzador.ProgressNoFiles;
+                    depotsToDownload.Add(depotFileData);
+                    allFileNamesAllDepots.UnionWith(depotFileData.allFileNames);
+                }
                     depotsToDownload.Add(depotFileData);
                     allFileNamesAllDepots.UnionWith(depotFileData.allFileNames);
                 }
@@ -1167,7 +1214,10 @@ namespace DepotDownloader
                     lock (depotDownloadCounter)
                     {
                         depotDownloadCounter.sizeDownloaded += file.TotalSize;
-                        Console.WriteLine("{0,6:#00.00}% {1}", (depotDownloadCounter.sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, fileFinalPath);
+                        if (!depotDownloadCounter.progressNoFiles)
+                        {
+                            Console.WriteLine("{0,6:#00.00}% {1}", (depotDownloadCounter.sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, fileFinalPath);
+                        }
                     }
 
                     lock (downloadCounter)
@@ -1347,6 +1397,39 @@ namespace DepotDownloader
             lock (depotDownloadCounter)
             {
                 sizeDownloaded = depotDownloadCounter.sizeDownloaded + (ulong)written;
+                if (depotDownloadCounter.progressEveryT > 0)
+                {
+                    uint progressConditionValue = (uint)Math.Floor((float)depotDownloadCounter.depotDownloadTime.ElapsedMilliseconds / depotDownloadCounter.progressEveryT);
+                    if (progressConditionValue > depotDownloadCounter.progressLastT)
+                    {
+                        depotDownloadCounter.progressLastT = progressConditionValue;
+                        TimeSpan tsdepot = depotDownloadCounter.depotDownloadTime.Elapsed;
+                        Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.completeDownloadSize);
+                    }
+                }
+                if (depotDownloadCounter.progressEveryP > 0)
+                {
+                    float currentPercentage = sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize;
+                    uint progressConditionValue = (uint)Math.Floor(currentPercentage / depotDownloadCounter.progressEveryP);
+                    if (progressConditionValue > depotDownloadCounter.progressLastP)
+                    {
+                        //Instead of multiplying values by 100 to get a percentage during every check, the user-provided -progress-every-p value is divided by 100 (in Program.cs).
+                        depotDownloadCounter.progressLastP = progressConditionValue;
+                        TimeSpan tsdepot = depotDownloadCounter.depotDownloadTime.Elapsed;
+                        Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", currentPercentage * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.completeDownloadSize);
+                    }
+                }
+                if (depotDownloadCounter.progressEveryB > 0)
+                {
+                    ulong progressConditionValue = (ulong)Math.Floor((float)sizeDownloaded / depotDownloadCounter.progressEveryB);
+                    if (progressConditionValue > depotDownloadCounter.progressLastB)
+                    {
+                        depotDownloadCounter.progressLastB = progressConditionValue;
+                        TimeSpan tsdepot = depotDownloadCounter.depotDownloadTime.Elapsed;
+                        Console.WriteLine("{0,6:#00.00}% {1:00}:{2:00}:{3:00}.{4:000} {5}/{6} bytes", (sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds, sizeDownloaded, depotDownloadCounter.completeDownloadSize);
+                    }
+                }
+
                 depotDownloadCounter.sizeDownloaded = sizeDownloaded;
                 depotDownloadCounter.depotBytesCompressed += chunk.CompressedLength;
                 depotDownloadCounter.depotBytesUncompressed += chunk.UncompressedLength;
@@ -1363,7 +1446,10 @@ namespace DepotDownloader
             if (remainingChunks == 0)
             {
                 var fileFinalPath = Path.Combine(depot.InstallDir, file.FileName);
-                Console.WriteLine("{0,6:#00.00}% {1}", (sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, fileFinalPath);
+                if (!depotDownloadCounter.progressNoFiles)
+                {
+                    Console.WriteLine("{0,6:#00.00}% {1}", (sizeDownloaded / (float)depotDownloadCounter.completeDownloadSize) * 100.0f, fileFinalPath);
+                }
             }
         }
 

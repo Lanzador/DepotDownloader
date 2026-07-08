@@ -11,6 +11,8 @@ AppID;KEY
 
 - Load manifests by placing them in `manifests` subdirectory
 
+- Use `-progress-every-s X`, `-progress-every-ms XXXX`, `-progress-every-p XX.X`, `-progress-every-b XXXXXXX` to print additional progress messages every X seconds/msec or percent/bytes downloaded. Use `-progress-no-files` to disable standard progress messages printed after every file
+
 - Prints download time
 
 
