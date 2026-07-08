@@ -1002,7 +1002,7 @@ namespace DepotDownloader
             DepotConfigStore.Instance.InstalledManifestIDs[depot.DepotId] = depot.ManifestId;
             DepotConfigStore.Save();
 
-            depotCounter.DepotDownloadTime.Stop();
+            depotCounter.depotDownloadTime.Stop();
             TimeSpan tsdepot = depotCounter.depotDownloadTime.Elapsed;
             Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
                 depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed,  tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
