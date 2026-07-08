@@ -1,3 +1,6 @@
+// This file is subject to the terms and conditions defined
+// in file 'LICENSE', which is part of this source code package.
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,21 +11,30 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using SteamKit2;
+using SteamKit2.CDN;
 
 namespace DepotDownloader
 {
     class Program
     {
-        static int Main(string[] args)
-            => MainAsync(args).GetAwaiter().GetResult();
+        private static bool[] consumedArgs;
 
-        static async Task<int> MainAsync(string[] args)
+        static async Task<int> Main(string[] args)
         {
             if (args.Length == 0)
             {
+                PrintVersion();
                 PrintUsage();
-                return 1;
+
+                if (OperatingSystem.IsWindowsVersionAtLeast(5, 0))
+                {
+                    PlatformUtilities.VerifyConsoleLaunch();
+                }
+
+                return 0;
             }
+
+            Ansi.Init();
 
             DebugLog.Enabled = false;
 
@@ -30,8 +42,19 @@ namespace DepotDownloader
 
             #region Common Options
 
+            // Not using HasParameter because it is case insensitive
+            if (args.Length == 1 && (args[0] == "-V" || args[0] == "--version"))
+            {
+                PrintVersion(true);
+                return 0;
+            }
+
+            consumedArgs = new bool[args.Length];
+
             if (HasParameter(args, "-debug"))
             {
+                PrintVersion(true);
+
                 DebugLog.Enabled = true;
                 DebugLog.AddListener((category, message) =>
                 {
@@ -39,14 +62,27 @@ namespace DepotDownloader
                 });
 
                 var httpEventListener = new HttpDiagnosticEventListener();
-
-                DebugLog.WriteLine("DepotDownloader", "Version: {0}", Assembly.GetExecutingAssembly().GetName().Version);
-                DebugLog.WriteLine("DepotDownloader", "Runtime: {0}", RuntimeInformation.FrameworkDescription);
             }
 
             var username = GetParameter<string>(args, "-username") ?? GetParameter<string>(args, "-user");
             var password = GetParameter<string>(args, "-password") ?? GetParameter<string>(args, "-pass");
             ContentDownloader.Config.RememberPassword = HasParameter(args, "-remember-password");
+            ContentDownloader.Config.UseQrCode = HasParameter(args, "-qr");
+            ContentDownloader.Config.SkipAppConfirmation = HasParameter(args, "-no-mobile");
+
+            if (username == null)
+            {
+                if (ContentDownloader.Config.RememberPassword && !ContentDownloader.Config.UseQrCode)
+                {
+                    Console.WriteLine("Error: -remember-password can not be used without -username or -qr.");
+                    return 1;
+                }
+            }
+            else if (ContentDownloader.Config.UseQrCode)
+            {
+                Console.WriteLine("Error: -qr can not be used with -username.");
+                return 1;
+            }
 
             ContentDownloader.Config.DownloadManifestOnly = HasParameter(args, "-manifest-only");
 
@@ -62,20 +98,26 @@ namespace DepotDownloader
 
             if (fileList != null)
             {
+                const string RegexPrefix = "regex:";
+
                 try
                 {
-                    var fileListData = await File.ReadAllTextAsync(fileList);
-                    var files = fileListData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-
                     ContentDownloader.Config.UsingFileList = true;
                     ContentDownloader.Config.FilesToDownload = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    ContentDownloader.Config.FilesToDownloadRegex = new List<Regex>();
+                    ContentDownloader.Config.FilesToDownloadRegex = [];
+
+                    var files = await File.ReadAllLinesAsync(fileList);
 
                     foreach (var fileEntry in files)
                     {
-                        if (fileEntry.StartsWith("regex:"))
+                        if (string.IsNullOrWhiteSpace(fileEntry))
                         {
-                            var rgx = new Regex(fileEntry.Substring(6), RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                            continue;
+                        }
+
+                        if (fileEntry.StartsWith(RegexPrefix))
+                        {
+                            var rgx = new Regex(fileEntry[RegexPrefix.Length..], RegexOptions.Compiled | RegexOptions.IgnoreCase);
                             ContentDownloader.Config.FilesToDownloadRegex.Add(rgx);
                         }
                         else
@@ -91,33 +133,28 @@ namespace DepotDownloader
                     Console.WriteLine("Warning: Unable to load filelist: {0}", ex);
                 }
             }
-			
-			string depotKeysList = GetParameter<string>(args, "-depotkeys");
-
-            if (depotKeysList != null)
-            {
-                try
-                {
-                    string depotKeysListData = File.ReadAllText(depotKeysList);
-                    string[] lines = depotKeysListData.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    DepotKeyStore.AddAll(lines);
-
-
-                    Console.WriteLine("Using depot keys from '{0}'.", depotKeysList);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Warning: Unable to load depot keys: {0}", ex.ToString());
-                }
-            }
 
             ContentDownloader.Config.InstallDirectory = GetParameter<string>(args, "-dir");
 
             ContentDownloader.Config.VerifyAll = HasParameter(args, "-verify-all") || HasParameter(args, "-verify_all") || HasParameter(args, "-validate");
-            ContentDownloader.Config.MaxServers = GetParameter(args, "-max-servers", 20);
+
+            if (HasParameter(args, "-use-lancache"))
+            {
+                await Client.DetectLancacheServerAsync();
+                if (Client.UseLancacheServer)
+                {
+                    Console.WriteLine("Detected Lancache server! Downloads will be directed through the Lancache.");
+
+                    // Increasing the number of concurrent downloads when the cache is detected since the downloads will likely
+                    // be served much faster than over the internet.  Steam internally has this behavior as well.
+                    if (!HasParameter(args, "-max-downloads"))
+                    {
+                        ContentDownloader.Config.MaxDownloads = 25;
+                    }
+                }
+            }
+
             ContentDownloader.Config.MaxDownloads = GetParameter(args, "-max-downloads", 8);
-            ContentDownloader.Config.MaxServers = Math.Max(ContentDownloader.Config.MaxServers, ContentDownloader.Config.MaxDownloads);
             ContentDownloader.Config.LoginID = HasParameter(args, "-loginid") ? GetParameter<uint>(args, "-loginid") : null;
 
             #endregion
@@ -128,32 +165,6 @@ namespace DepotDownloader
                 Console.WriteLine("Error: -app not specified!");
                 return 1;
             }
-			#nullable enable
-			ulong? AppTokenParameter = GetParameter<ulong?>(args, "-apptoken");
-			List<ulong> deltaManifestIds = GetParameterList<ulong>(args, "-delta-manifest");
-			string? deltabranch = GetParameter<string?>(args, "-delta-branch");
-			uint ProgressEveryT = 0;
-			if (HasParameter(args, "-progress-every-s"))
-			{
-				ProgressEveryT = GetParameter<uint>(args, "-progress-every-s") * 1000;
-			}
-			else if (HasParameter(args, "-progress-every-ms"))
-			{
-				ProgressEveryT = GetParameter<uint>(args, "-progress-every-ms");
-			}
-			float ProgressEveryP = GetParameter<float>(args, "-progress-every-p", 0) / 100;
-			if (ProgressEveryP < 0)
-			{
-				ProgressEveryP = 0;
-			}
-			ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
-			bool FreeLicense = HasParameter(args, "-free-license");
-			bool SkipDepotCheck = HasParameter(args, "-depot-exists");
-            string? SentryFilePath = GetParameter<string?>(args, "-ssfn");
-            string? SentryFileHash = GetParameter<string?>(args, "-ssfn-hash");
-			bool ProgressNoFiles = HasParameter(args, "-progress-no-files");
-			ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, deltaManifestIds, deltabranch, ProgressEveryT, ProgressEveryP, ProgressEveryB, FreeLicense, SkipDepotCheck, SentryFilePath, SentryFileHash, ProgressNoFiles);
-			#nullable disable
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);
             var ugcId = GetParameter(args, "-ugc", ContentDownloader.INVALID_MANIFEST_ID);
@@ -161,16 +172,13 @@ namespace DepotDownloader
             {
                 #region Pubfile Downloading
 
-                if (InitializeSteam(username, password, Lanzador))
+                PrintUnconsumedArgs(args);
+
+                if (InitializeSteam(username, password))
                 {
                     try
                     {
-                        if (deltaManifestIds.Count > 1)
-                        {
-                            Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
-                            return 1;
-                        }
-                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile, Lanzador).ConfigureAwait(false);
+                        await ContentDownloader.DownloadPubfileAsync(appId, pubFile).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -201,16 +209,13 @@ namespace DepotDownloader
             {
                 #region UGC Downloading
 
-                if (InitializeSteam(username, password, Lanzador))
+                PrintUnconsumedArgs(args);
+
+                if (InitializeSteam(username, password))
                 {
                     try
                     {
-                        if (deltaManifestIds.Count > 1)
-                        {
-                            Console.WriteLine("Error: -delta-manifest can't have more than one ID when downloading UGC/pubfile.");
-                            return 1;
-                        }
-                        await ContentDownloader.DownloadUGCAsync(appId, ugcId, Lanzador).ConfigureAwait(false);
+                        await ContentDownloader.DownloadUGCAsync(appId, ugcId).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -242,23 +247,38 @@ namespace DepotDownloader
                 #region App downloading
 
                 var branch = GetParameter<string>(args, "-branch") ?? GetParameter<string>(args, "-beta") ?? ContentDownloader.DEFAULT_BRANCH;
-                ContentDownloader.Config.BetaPassword = GetParameter<string>(args, "-betapassword");
+                ContentDownloader.Config.BetaPassword = GetParameter<string>(args, "-branchpassword") ?? GetParameter<string>(args, "-betapassword");
+
+                if (!string.IsNullOrEmpty(ContentDownloader.Config.BetaPassword) && string.IsNullOrEmpty(branch))
+                {
+                    Console.WriteLine("Error: Cannot specify -branchpassword when -branch is not specified.");
+                    return 1;
+                }
 
                 ContentDownloader.Config.DownloadAllPlatforms = HasParameter(args, "-all-platforms");
+
                 var os = GetParameter<string>(args, "-os");
 
-                if (ContentDownloader.Config.DownloadAllPlatforms && !String.IsNullOrEmpty(os))
+                if (ContentDownloader.Config.DownloadAllPlatforms && !string.IsNullOrEmpty(os))
                 {
                     Console.WriteLine("Error: Cannot specify -os when -all-platforms is specified.");
                     return 1;
                 }
 
+                ContentDownloader.Config.DownloadAllArchs = HasParameter(args, "-all-archs");
+
                 var arch = GetParameter<string>(args, "-osarch");
+
+                if (ContentDownloader.Config.DownloadAllArchs && !string.IsNullOrEmpty(arch))
+                {
+                    Console.WriteLine("Error: Cannot specify -osarch when -all-archs is specified.");
+                    return 1;
+                }
 
                 ContentDownloader.Config.DownloadAllLanguages = HasParameter(args, "-all-languages");
                 var language = GetParameter<string>(args, "-language");
 
-                if (ContentDownloader.Config.DownloadAllLanguages && !String.IsNullOrEmpty(language))
+                if (ContentDownloader.Config.DownloadAllLanguages && !string.IsNullOrEmpty(language))
                 {
                     Console.WriteLine("Error: Cannot specify -language when -all-languages is specified.");
                     return 1;
@@ -271,7 +291,6 @@ namespace DepotDownloader
 
                 var depotIdList = GetParameterList<uint>(args, "-depot");
                 var manifestIdList = GetParameterList<ulong>(args, "-manifest");
-
                 if (manifestIdList.Count > 0)
                 {
                     if (depotIdList.Count != manifestIdList.Count)
@@ -288,17 +307,13 @@ namespace DepotDownloader
                     depotManifestIds.AddRange(depotIdList.Select(depotId => (depotId, ContentDownloader.INVALID_MANIFEST_ID)));
                 }
 
-                if (deltaManifestIds.Count > 0 && depotIdList.Count != deltaManifestIds.Count)
-                {
-                    Console.WriteLine("Error: -delta-manifest requires one id for every -depot specified");
-                    return 1;
-                }
+                PrintUnconsumedArgs(args);
 
-                if (InitializeSteam(username, password, Lanzador))
+                if (InitializeSteam(username, password))
                 {
                     try
                     {
-                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC, Lanzador).ConfigureAwait(false);
+                        await ContentDownloader.DownloadAppAsync(appId, depotManifestIds, branch, os, arch, language, lv, isUGC).ConfigureAwait(false);
                     }
                     catch (Exception ex) when (
                         ex is ContentDownloaderException
@@ -329,35 +344,55 @@ namespace DepotDownloader
             return 0;
         }
 
-        static bool InitializeSteam(string username, string password, ContentDownloader.LanzadorData Lanzador)
+        static bool InitializeSteam(string username, string password)
         {
-            if (username != null && password == null && (!ContentDownloader.Config.RememberPassword || !AccountSettingsStore.Instance.LoginKeys.ContainsKey(username)))
+            if (!ContentDownloader.Config.UseQrCode)
             {
-                do
+                if (username != null && password == null && (!ContentDownloader.Config.RememberPassword || !AccountSettingsStore.Instance.LoginTokens.ContainsKey(username)))
                 {
-                    Console.Write("Enter account password for \"{0}\": ", username);
-                    if (Console.IsInputRedirected)
+                    if (AccountSettingsStore.Instance.LoginTokens.ContainsKey(username))
                     {
-                        password = Console.ReadLine();
-                    }
-                    else
-                    {
-                        // Avoid console echoing of password
-                        password = Util.ReadPassword();
+                        Console.WriteLine($"Account \"{username}\" has stored credentials. Did you forget to specify -remember-password?");
                     }
 
-                    Console.WriteLine();
-                } while (string.Empty == password);
+                    do
+                    {
+                        Console.Write("Enter account password for \"{0}\": ", username);
+                        if (Console.IsInputRedirected)
+                        {
+                            password = Console.ReadLine();
+                        }
+                        else
+                        {
+                            // Avoid console echoing of password
+                            password = Util.ReadPassword();
+                        }
+
+                        Console.WriteLine();
+                    } while (string.Empty == password);
+                }
+                else if (username == null)
+                {
+                    Console.WriteLine("No username given. Using anonymous account with dedicated server subscription.");
+                }
             }
-            else if (username == null)
+
+            if (!string.IsNullOrEmpty(password))
             {
-                Console.WriteLine("No username given. Using anonymous account with dedicated server subscription.");
+                const int MAX_PASSWORD_SIZE = 64;
+
+                if (password.Length > MAX_PASSWORD_SIZE)
+                {
+                    Console.Error.WriteLine($"Warning: Password is longer than {MAX_PASSWORD_SIZE} characters, which is not supported by Steam.");
+                }
+
+                if (!password.All(char.IsAscii))
+                {
+                    Console.Error.WriteLine("Warning: Password contains non-ASCII characters, which is not supported by Steam.");
+                }
             }
 
-            // capture the supplied password in case we need to re-use it after checking the login key
-            ContentDownloader.Config.SuppliedPassword = password;
-
-            return ContentDownloader.InitializeSteam3(username, password, Lanzador);
+            return ContentDownloader.InitializeSteam3(username, password);
         }
 
         static int IndexOfParam(string[] args, string param)
@@ -365,7 +400,10 @@ namespace DepotDownloader
             for (var x = 0; x < args.Length; ++x)
             {
                 if (args[x].Equals(param, StringComparison.OrdinalIgnoreCase))
+                {
+                    consumedArgs[x] = true;
                     return x;
+                }
             }
 
             return -1;
@@ -376,7 +414,7 @@ namespace DepotDownloader
             return IndexOfParam(args, param) > -1;
         }
 
-        static T GetParameter<T>(string[] args, string param, T defaultValue = default(T))
+        static T GetParameter<T>(string[] args, string param, T defaultValue = default)
         {
             var index = IndexOfParam(args, param);
 
@@ -388,10 +426,11 @@ namespace DepotDownloader
             var converter = TypeDescriptor.GetConverter(typeof(T));
             if (converter != null)
             {
+                consumedArgs[index + 1] = true;
                 return (T)converter.ConvertFromString(strParam);
             }
 
-            return default(T);
+            return default;
         }
 
         static List<T> GetParameterList<T>(string[] args, string param)
@@ -413,6 +452,7 @@ namespace DepotDownloader
                 var converter = TypeDescriptor.GetConverter(typeof(T));
                 if (converter != null)
                 {
+                    consumedArgs[index] = true;
                     list.Add((T)converter.ConvertFromString(strParam));
                 }
 
@@ -422,48 +462,89 @@ namespace DepotDownloader
             return list;
         }
 
+        static void PrintUnconsumedArgs(string[] args)
+        {
+            var printError = false;
+
+            for (var index = 0; index < consumedArgs.Length; index++)
+            {
+                if (!consumedArgs[index])
+                {
+                    printError = true;
+                    Console.Error.WriteLine($"Argument #{index + 1} {args[index]} was not used.");
+                }
+            }
+
+            if (printError)
+            {
+                Console.Error.WriteLine("Make sure you specified the arguments correctly. Check --help for correct arguments.");
+                Console.Error.WriteLine();
+            }
+        }
+
         static void PrintUsage()
         {
+            // Do not use tabs to align parameters here because tab size may differ
             Console.WriteLine();
-            Console.WriteLine("Usage - downloading one or all depots for an app:");
-            Console.WriteLine("\tdepotdownloader -app <id> [-depot <id> [-manifest <id>]]");
-            Console.WriteLine("\t\t[-username <username> [-password <password>]] [other options]");
+            Console.WriteLine("Usage: downloading one or all depots for an app:");
+            Console.WriteLine("       depotdownloader -app <id> [-depot <id> [-manifest <id>]]");
+            Console.WriteLine("                       [-username <username> [-password <password>]] [other options]");
             Console.WriteLine();
-            Console.WriteLine("Usage - downloading a workshop item using pubfile id");
-            Console.WriteLine("\tdepotdownloader -app <id> -pubfile <id> [-username <username> [-password <password>]]");
-            Console.WriteLine("Usage - downloading a workshop item using ugc id");
-            Console.WriteLine("\tdepotdownloader -app <id> -ugc <id> [-username <username> [-password <password>]]");
+            Console.WriteLine("Usage: downloading a workshop item using pubfile id");
+            Console.WriteLine("       depotdownloader -app <id> -pubfile <id> [-username <username> [-password <password>]]");
+            Console.WriteLine("Usage: downloading a workshop item using ugc id");
+            Console.WriteLine("       depotdownloader -app <id> -ugc <id> [-username <username> [-password <password>]]");
             Console.WriteLine();
             Console.WriteLine("Parameters:");
-            Console.WriteLine("\t-app <#>\t\t\t\t- the AppID to download.");
-            Console.WriteLine("\t-depot <#>\t\t\t\t- the DepotID to download.");
-            Console.WriteLine("\t-manifest <id>\t\t\t- manifest id of content to download (requires -depot, default: current for branch).");
-            Console.WriteLine("\t-beta <branchname>\t\t\t- download from specified branch if available (default: Public).");
-            Console.WriteLine("\t-betapassword <pass>\t\t- branch password if applicable.");
-            Console.WriteLine("\t-all-platforms\t\t\t- downloads all platform-specific depots when -app is used.");
-            Console.WriteLine("\t-os <os>\t\t\t\t- the operating system for which to download the game (windows, macos or linux, default: OS the program is currently running on)");
-            Console.WriteLine("\t-osarch <arch>\t\t\t\t- the architecture for which to download the game (32 or 64, default: the host's architecture)");
-            Console.WriteLine("\t-all-languages\t\t\t\t- download all language-specific depots when -app is used.");
-            Console.WriteLine("\t-language <lang>\t\t\t\t- the language for which to download the game (default: english)");
-            Console.WriteLine("\t-lowviolence\t\t\t\t- download low violence depots when -app is used.");
+            Console.WriteLine("  -app <#>                 - the AppID to download.");
+            Console.WriteLine("  -depot <#>               - the DepotID to download.");
+            Console.WriteLine("  -manifest <id>           - manifest id of content to download (requires -depot, default: current for branch).");
+            Console.WriteLine($"  -branch <branchname>    - download from specified branch if available (default: {ContentDownloader.DEFAULT_BRANCH}).");
+            Console.WriteLine("  -branchpassword <pass>   - branch password if applicable.");
+            Console.WriteLine("  -all-platforms           - downloads all platform-specific depots when -app is used.");
+            Console.WriteLine("  -all-archs               - download all architecture-specific depots when -app is used.");
+            Console.WriteLine("  -os <os>                 - the operating system for which to download the game (windows, macos or linux, default: OS the program is currently running on)");
+            Console.WriteLine("  -osarch <arch>           - the architecture for which to download the game (32 or 64, default: the host's architecture)");
+            Console.WriteLine("  -all-languages           - download all language-specific depots when -app is used.");
+            Console.WriteLine("  -language <lang>         - the language for which to download the game (default: english)");
+            Console.WriteLine("  -lowviolence             - download low violence depots when -app is used.");
             Console.WriteLine();
-            Console.WriteLine("\t-ugc <#>\t\t\t\t- the UGC ID to download.");
-            Console.WriteLine("\t-pubfile <#>\t\t\t- the PublishedFileId to download. (Will automatically resolve to UGC id)");
+            Console.WriteLine("  -ugc <#>                 - the UGC ID to download.");
+            Console.WriteLine("  -pubfile <#>             - the PublishedFileId to download. (Will automatically resolve to UGC id)");
             Console.WriteLine();
-            Console.WriteLine("\t-username <user>\t\t- the username of the account to login to for restricted content.");
-            Console.WriteLine("\t-password <pass>\t\t- the password of the account to login to for restricted content.");
-            Console.WriteLine("\t-remember-password\t\t- if set, remember the password for subsequent logins of this user. (Use -username <username> -remember-password as login credentials)");
-			Console.WriteLine("\t-depotkeys <file.txt>\t- a list of depot keys to use ('depotID;hexKey' per line)");
+            Console.WriteLine("  -username <user>         - the username of the account to login to for restricted content.");
+            Console.WriteLine("  -password <pass>         - the password of the account to login to for restricted content.");
+            Console.WriteLine("  -remember-password       - if set, remember the password for subsequent logins of this user.");
+            Console.WriteLine("                             use -username <username> -remember-password as login credentials.");
+            Console.WriteLine("  -qr                      - display a login QR code to be scanned with the Steam mobile app");
+            Console.WriteLine("  -no-mobile               - prefer entering a 2FA code instead of prompting to accept in the Steam mobile app");
             Console.WriteLine();
-            Console.WriteLine("\t-dir <installdir>\t\t- the directory in which to place downloaded files.");
-            Console.WriteLine("\t-filelist <file.txt>\t- a list of files to download (from the manifest). Prefix file path with 'regex:' if you want to match with regex.");
-            Console.WriteLine("\t-validate\t\t\t\t- Include checksum verification of files already downloaded");
+            Console.WriteLine("  -dir <installdir>        - the directory in which to place downloaded files.");
+            Console.WriteLine("  -filelist <file.txt>     - the name of a local file that contains a list of files to download (from the manifest).");
+            Console.WriteLine("                             prefix file path with `regex:` if you want to match with regex. each file path should be on their own line.");
             Console.WriteLine();
-            Console.WriteLine("\t-manifest-only\t\t\t- downloads a human readable manifest for any depots that would be downloaded.");
-            Console.WriteLine("\t-cellid <#>\t\t\t\t- the overridden CellID of the content server to download from.");
-            Console.WriteLine("\t-max-servers <#>\t\t- maximum number of content servers to use. (default: 20).");
-            Console.WriteLine("\t-max-downloads <#>\t\t- maximum number of chunks to download concurrently. (default: 8).");
-            Console.WriteLine("\t-loginid <#>\t\t- a unique 32-bit integer Steam LogonID in decimal, required if running multiple instances of DepotDownloader concurrently.");
+            Console.WriteLine("  -validate                - include checksum verification of files already downloaded");
+            Console.WriteLine("  -manifest-only           - downloads a human readable manifest for any depots that would be downloaded.");
+            Console.WriteLine("  -cellid <#>              - the overridden CellID of the content server to download from.");
+            Console.WriteLine("  -max-downloads <#>       - maximum number of chunks to download concurrently. (default: 8).");
+            Console.WriteLine("  -loginid <#>             - a unique 32-bit integer Steam LogonID in decimal, required if running multiple instances of DepotDownloader concurrently.");
+            Console.WriteLine("  -use-lancache            - forces downloads over the local network via a Lancache instance.");
+            Console.WriteLine();
+            Console.WriteLine("  -debug                   - enable verbose debug logging.");
+            Console.WriteLine("  -V or --version          - print version and runtime.");
+        }
+
+        static void PrintVersion(bool printExtra = false)
+        {
+            var version = typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            Console.WriteLine($"DepotDownloader v{version}");
+
+            if (!printExtra)
+            {
+                return;
+            }
+
+            Console.WriteLine($"Runtime: {RuntimeInformation.FrameworkDescription} on {RuntimeInformation.OSDescription}");
         }
     }
 }
