@@ -48,36 +48,36 @@ namespace DepotDownloader
             public byte[] DepotKey { get; } = depotKey;
         }
 
-		public class LanzadorData
-		{
-			public ulong? AppTokenParameter;
-			//public List<ulong> deltaManifestIds;
-			//public string? deltabranch;
-			public uint ProgressEveryT;
-			public float ProgressEveryP;
-			public ulong ProgressEveryB;
+        public class LanzadorData
+        {
+            public ulong? AppTokenParameter;
+            //public List<ulong> deltaManifestIds;
+            //public string? deltabranch;
+            public uint ProgressEveryT;
+            public float ProgressEveryP;
+            public ulong ProgressEveryB;
             public bool ProgressNoFiles;
-			//public bool FreeLicense;
-			//public bool SkipDepotCheck;
+            //public bool FreeLicense;
+            public bool SkipDepotCheck;
             //public string? SentryFilePath;
             //public string? SentryFileHash;
 
-			//public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
-			public LanzadorData(ulong? apptoken, uint progressT, float progressP, ulong progressB, bool nofiles)
-			{
-				AppTokenParameter = apptoken;
-				//deltaManifestIds = deltaids;
-				//deltabranch = deltabr;
-				ProgressEveryT = progressT;
-				ProgressEveryP = progressP;
-				ProgressEveryB = progressB;
+            //public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
+            public LanzadorData(ulong? apptoken, uint progressT, float progressP, ulong progressB, bool nofiles, bool skipcheck)
+            {
+                AppTokenParameter = apptoken;
+                //deltaManifestIds = deltaids;
+                //deltabranch = deltabr;
+                ProgressEveryT = progressT;
+                ProgressEveryP = progressP;
+                ProgressEveryB = progressB;
                 ProgressNoFiles = nofiles;
-				//FreeLicense = reqfree;
-				//SkipDepotCheck = skipcheck;
+                //FreeLicense = reqfree;
+                SkipDepotCheck = skipcheck;
                 //SentryFilePath = ssfnpath;
                 //SentryFileHash = ssfnhash;
-			}
-		}
+            }
+        }
 
         static bool CreateDirectories(uint depotId, uint depotVersion, out string installDir)
         {
@@ -474,7 +474,11 @@ namespace DepotDownloader
             var hasSpecificDepots = depotManifestIds.Count > 0;
             var depotIdsFound = new List<uint>();
             var depotIdsExpected = depotManifestIds.Select(x => x.depotId).ToList();
-            var depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
+            KeyValue depots = new KeyValue();
+            if (!Lanzador.SkipDepotCheck)
+            {
+                depots = GetSteam3AppSection(appId, EAppInfoSection.Depots);
+            }
 
             if (isUgc)
             {
@@ -556,7 +560,7 @@ namespace DepotDownloader
                     throw new ContentDownloaderException(string.Format("Couldn't find any depots to download for app {0}", appId));
                 }
 
-                if (depotIdsFound.Count < depotIdsExpected.Count)
+                if (depotIdsFound.Count < depotIdsExpected.Count && !Lanzador.SkipDepotCheck)
                 {
                     var remainingDepotIds = depotIdsExpected.Except(depotIdsFound);
                     throw new ContentDownloaderException(string.Format("Depot {0} not listed for app {1}", string.Join(", ", remainingDepotIds), appId));
@@ -643,7 +647,11 @@ namespace DepotDownloader
             Directory.CreateDirectory("depots");
             File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
 
-            var uVersion = GetSteam3AppBuildNumber(appId, branch);
+            uint uVersion = 0;
+            if (!Lanzador.SkipDepotCheck)
+            {
+                uVersion = GetSteam3AppBuildNumber(appId, branch);
+            }
 
             if (!CreateDirectories(depotId, uVersion, out var installDir))
             {
