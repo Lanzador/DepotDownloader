@@ -1,3 +1,19 @@
+Fork
+===============
+
+- Load depot keys using `-depotkeys keys.txt`, the `.txt` must follow this format:
+
+```
+AppID;KEY
+AppID;KEY
+...
+```
+
+- Load manifests by placing them in `manifests` subdirectory
+
+- Prints download time
+
+
 DepotDownloader
 ===============
 

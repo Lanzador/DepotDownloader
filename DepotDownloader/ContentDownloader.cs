@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 using SteamKit2;
 using SteamKit2.CDN;
 
@@ -663,6 +664,7 @@ namespace DepotDownloader
             public ulong completeDownloadSize;
             public ulong totalBytesCompressed;
             public ulong totalBytesUncompressed;
+            public Stopwatch totalDownloadTime = new Stopwatch();
         }
 
         private class DepotDownloadCounter
@@ -671,6 +673,7 @@ namespace DepotDownloader
             public ulong sizeDownloaded;
             public ulong depotBytesCompressed;
             public ulong depotBytesUncompressed;
+            public Stopwatch depotDownloadTime = new Stopwatch();
         }
 
         private static async Task DownloadSteam3Async(List<DepotDownloadInfo> depots)
@@ -713,15 +716,18 @@ namespace DepotDownloader
                 }
             }
 
+            downloadCounter.totalDownloadTime.Start();
             foreach (var depotFileData in depotsToDownload)
             {
                 await DownloadSteam3AsyncDepotFiles(cts, downloadCounter, depotFileData, allFileNamesAllDepots);
             }
+            downloadCounter.totalDownloadTime.Stop();
+            TimeSpan totalts = downloadCounter.totalDownloadTime.Elapsed;
 
             Ansi.Progress(Ansi.ProgressState.Hidden);
 
-            Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots",
-                downloadCounter.totalBytesCompressed, downloadCounter.totalBytesUncompressed, depots.Count);
+            Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots in {3:00}:{4:00}:{5:00}.{6:000}",
+                downloadCounter.totalBytesCompressed, downloadCounter.totalBytesUncompressed, depots.Count, totalts.Hours, totalts.Minutes, totalts.Seconds, totalts.Milliseconds);
         }
 
         private static async Task<DepotFilesData> ProcessDepotManifestAndFiles(CancellationTokenSource cts, DepotDownloadInfo depot, GlobalDownloadCounter downloadCounter)
@@ -948,6 +954,8 @@ namespace DepotDownloader
                 CancellationToken = cts.Token
             };
 
+            depotCounter.depotDownloadTime.Start();
+
             await Parallel.ForEachAsync(files, parallelOptions, async (file, cancellationToken) =>
             {
                 await Task.Yield();
@@ -994,7 +1002,10 @@ namespace DepotDownloader
             DepotConfigStore.Instance.InstalledManifestIDs[depot.DepotId] = depot.ManifestId;
             DepotConfigStore.Save();
 
-            Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed)", depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed);
+            depotCounter.DepotDownloadTime.Stop();
+            TimeSpan tsdepot = depotCounter.depotDownloadTime.Elapsed;
+            Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
+                depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed,  tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
         }
 
         private static void DownloadSteam3AsyncDepotFile(
