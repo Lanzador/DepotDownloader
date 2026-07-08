@@ -660,14 +660,17 @@ namespace DepotDownloader
             }
 
             // For depots that are proxied through depotfromapp, we still need to resolve the proxy app id, unless the app is freetodownload
-            var containingAppId = appId;
-            var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
-            if (proxyAppId != INVALID_APP_ID)
+            if (!Lanzador.SkipDepotCheck)
             {
-                var common = GetSteam3AppSection(appId, EAppInfoSection.Common);
-                if (common == null || !common["FreeToDownload"].AsBoolean())
+                var containingAppId = appId;
+                var proxyAppId = GetSteam3DepotProxyAppId(depotId, appId);
+                if (proxyAppId != INVALID_APP_ID)
                 {
-                    containingAppId = proxyAppId;
+                    var common = GetSteam3AppSection(appId, EAppInfoSection.Common);
+                    if (common == null || !common["FreeToDownload"].AsBoolean())
+                    {
+                        containingAppId = proxyAppId;
+                    }
                 }
             }
 
