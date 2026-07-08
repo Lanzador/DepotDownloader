@@ -608,6 +608,7 @@ namespace DepotDownloader
                 }
             }
 
+            Directory.CreateDirectory("depots");
             File.WriteAllText($"depots\\{depotId}.key", BitConverter.ToString(depotKey).Replace("-", ""));
 
             var uVersion = GetSteam3AppBuildNumber(appId, branch);
