@@ -818,6 +818,7 @@ namespace DepotDownloader
                 if (newManifest == null)
                 {
                     newManifest = Util.LoadManifestFromFile("manifests", depot.DepotId, depot.ManifestId, false, true);
+					newManifest.DecryptFilenames(depot.DepotKey);
                 }
 
                 if (newManifest != null)
