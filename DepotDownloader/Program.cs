@@ -205,7 +205,8 @@ namespace DepotDownloader
             ulong ProgressEveryB = GetParameter<ulong>(args, "-progress-every-b", 0);
             bool ProgressNoFiles = HasParameter(args, "-progress-no-files");
             bool SkipDepotCheck = HasParameter(args, "-depot-exists");
-            ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, ProgressEveryT, ProgressEveryP, ProgressEveryB, ProgressNoFiles, SkipDepotCheck);
+            bool OnlyValidate = HasParameter(args, "-only-validate");
+            ContentDownloader.LanzadorData Lanzador = new ContentDownloader.LanzadorData(AppTokenParameter, ProgressEveryT, ProgressEveryP, ProgressEveryB, ProgressNoFiles, SkipDepotCheck, OnlyValidate);
             #nullable disable
 
             var pubFile = GetParameter(args, "-pubfile", ContentDownloader.INVALID_MANIFEST_ID);

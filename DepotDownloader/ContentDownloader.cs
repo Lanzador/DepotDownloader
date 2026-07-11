@@ -61,9 +61,10 @@ namespace DepotDownloader
             public bool SkipDepotCheck;
             //public string? SentryFilePath;
             //public string? SentryFileHash;
+            public bool OnlyValidate;
 
             //public LanzadorData(ulong? apptoken, List<ulong> deltaids, string? deltabr, uint progressT, float progressP, ulong progressB, bool nofiles, bool reqfree, bool skipcheck, string? ssfnpath, string? ssfnhash)
-            public LanzadorData(ulong? apptoken, uint progressT, float progressP, ulong progressB, bool nofiles, bool skipcheck)
+            public LanzadorData(ulong? apptoken, uint progressT, float progressP, ulong progressB, bool nofiles, bool skipcheck, bool onlyvalidate)
             {
                 AppTokenParameter = apptoken;
                 //deltaManifestIds = deltaids;
@@ -76,6 +77,7 @@ namespace DepotDownloader
                 SkipDepotCheck = skipcheck;
                 //SentryFilePath = ssfnpath;
                 //SentryFileHash = ssfnhash;
+                OnlyValidate = onlyvalidate;
             }
         }
 
@@ -725,6 +727,16 @@ namespace DepotDownloader
             public bool progressNoFiles;
         }
 
+        private class OnlyValidateCounter
+        {
+            public ulong depotChunks;
+            public ulong depotBytes;
+            public ulong depotCompressed;
+            public ulong totalChunks;
+            public ulong totalBytes;
+            public ulong totalCompressed;
+        }
+
         private static async Task DownloadSteam3Async(List<DepotDownloadInfo> depots, LanzadorData Lanzador)
         {
             Ansi.Progress(Ansi.ProgressState.Indeterminate);
@@ -769,15 +781,22 @@ namespace DepotDownloader
                 }
             }
 
+            var validateCounter = new OnlyValidateCounter();
+
             downloadCounter.totalDownloadTime.Start();
             foreach (var depotFileData in depotsToDownload)
             {
-                await DownloadSteam3AsyncDepotFiles(cts, downloadCounter, depotFileData, allFileNamesAllDepots);
+                await DownloadSteam3AsyncDepotFiles(cts, downloadCounter, depotFileData, allFileNamesAllDepots, Lanzador, validateCounter);
             }
             downloadCounter.totalDownloadTime.Stop();
             TimeSpan totalts = downloadCounter.totalDownloadTime.Elapsed;
 
             Ansi.Progress(Ansi.ProgressState.Hidden);
+
+            if (Lanzador.OnlyValidate)
+            {
+                Console.WriteLine("Total for all depots: {0} chunks, {1} bytes, {2} compressed", validateCounter.totalChunks, validateCounter.totalBytes, validateCounter.totalCompressed);
+            }
 
             Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots in {3:00}:{4:00}:{5:00}.{6:000}",
                 downloadCounter.totalBytesCompressed, downloadCounter.totalBytesUncompressed, depots.Count, totalts.Hours, totalts.Minutes, totalts.Seconds, totalts.Milliseconds);
@@ -818,7 +837,7 @@ namespace DepotDownloader
                 if (newManifest == null)
                 {
                     newManifest = Util.LoadManifestFromFile("manifests", depot.DepotId, depot.ManifestId, false, true);
-                    if (newManifest.FilenamesEncrypted)
+                    if (newManifest != null && newManifest.FilenamesEncrypted)
                     {
                         newManifest.DecryptFilenames(depot.DepotKey);
                         Util.SaveManifestToFile(configDir, newManifest);
@@ -996,12 +1015,19 @@ namespace DepotDownloader
         }
 
         private static async Task DownloadSteam3AsyncDepotFiles(CancellationTokenSource cts,
-            GlobalDownloadCounter downloadCounter, DepotFilesData depotFilesData, HashSet<string> allFileNamesAllDepots)
+            GlobalDownloadCounter downloadCounter, DepotFilesData depotFilesData, HashSet<string> allFileNamesAllDepots, LanzadorData Lanzador, OnlyValidateCounter validateCounter)
         {
             var depot = depotFilesData.depotDownloadInfo;
             var depotCounter = depotFilesData.depotCounter;
 
-            Console.WriteLine("Downloading depot {0}", depot.DepotId);
+            if (!Lanzador.OnlyValidate)
+            {
+                Console.WriteLine("Downloading depot {0}", depot.DepotId);
+            }
+            else
+            {
+                Console.WriteLine("Validating depot {1}", depot.DepotId);
+            }
 
             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
             var networkChunkQueue = new ConcurrentQueue<(FileStreamData fileStreamData, DepotManifest.FileData fileData, DepotManifest.ChunkData chunk)>();
@@ -1017,8 +1043,28 @@ namespace DepotDownloader
             await Parallel.ForEachAsync(files, parallelOptions, async (file, cancellationToken) =>
             {
                 await Task.Yield();
-                DownloadSteam3AsyncDepotFile(cts, downloadCounter, depotFilesData, file, networkChunkQueue);
+                if (!Lanzador.OnlyValidate)
+                {
+                    DownloadSteam3AsyncDepotFile(cts, downloadCounter, depotFilesData, file, networkChunkQueue);
+                }
+                else
+                {
+                    OnlyValidateDepotFile(cts, downloadCounter, depotFilesData, file, validateCounter);
+                }
             });
+
+            if (Lanzador.OnlyValidate)
+            {
+                depotCounter.depotDownloadTime.Stop();
+                TimeSpan tsdepot = depotCounter.depotDownloadTime.Elapsed;
+                Console.WriteLine("Total for this depot: {0} chunks, {1} bytes, {2} compressed", validateCounter.depotChunks, validateCounter.depotBytes, validateCounter.depotCompressed);
+                validateCounter.depotChunks = 0;
+                validateCounter.depotBytes = 0;
+                validateCounter.depotCompressed = 0;
+                Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
+                    depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed,  tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
+                return
+            }
 
             await Parallel.ForEachAsync(networkChunkQueue, parallelOptions, async (q, cancellationToken) =>
             {
@@ -1064,6 +1110,63 @@ namespace DepotDownloader
             TimeSpan tsdepot = depotCounter.depotDownloadTime.Elapsed;
             Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
                 depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed,  tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
+        }
+
+
+        private static void OnlyValidateDepotFile(
+            CancellationTokenSource cts,
+            GlobalDownloadCounter downloadCounter,
+            DepotFilesData depotFilesData,
+            DepotManifest.FileData file,
+            OnlyValidateCounter validateCounter)
+        {
+            cts.Token.ThrowIfCancellationRequested();
+
+            var depot = depotFilesData.depotDownloadInfo;
+            var depotDownloadCounter = depotFilesData.depotCounter;
+
+            var fileFinalPath = Path.Combine(depot.InstallDir, file.FileName);
+
+            List<DepotManifest.ChunkData> neededChunks;
+            var fi = new FileInfo(fileFinalPath);
+            var fileDidExist = fi.Exists;
+            if (!fileDidExist)
+            {
+                neededChunks = new List<DepotManifest.ChunkData>(file.Chunks);
+            }
+            else
+            {
+                using var fs = File.Open(fileFinalPath, FileMode.Open);
+
+                neededChunks = Util.ValidateSteam3FileChecksums(fs, [.. file.Chunks.OrderBy(x => x.Offset)]);
+            }
+
+            if (neededChunks.Count > 0)
+            {
+                ulong neededBytes = (ulong)neededChunks.Select(x => (long)x.UncompressedLength).Sum()
+                ulong neededBytesCompressed = (ulong)neededChunks.Select(x => (long)x.CompressedLength).Sum()
+                Console.WriteLine(" {0} {1}", fileDidExist ? "*" : "!", fileFinalPath);
+                Console.WriteLine("   - Chunks: {0}/{1} Bytes: {2} Compressed: {3}", neededChunks.Count, file.Chunks.Count, neededBytes, neededBytesCompressed);
+
+                lock (validateCounter)
+                {
+                    validateCounter.depotChunks += (ulong)neededChunks.Count;
+                    validateCounter.totalChunks += (ulong)neededChunks.Count;
+                    validateCounter.depotBytes += neededBytes;
+                    validateCounter.totalBytes += neededBytes;
+                    validateCounter.depotCompressed += neededBytesCompressed;
+                    validateCounter.totalCompressed += neededBytesCompressed;
+                }
+            }
+
+            lock (depotDownloadCounter)
+            {
+                depotDownloadCounter.sizeDownloaded += file.TotalSize;
+            }
+            lock (downloadCounter)
+            {
+                downloadCounter.completeDownloadSize -= file.TotalSize;
+            }
         }
 
         private static void DownloadSteam3AsyncDepotFile(

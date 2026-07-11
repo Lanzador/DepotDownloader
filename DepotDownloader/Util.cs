@@ -82,9 +82,16 @@ namespace DepotDownloader
         public static List<DepotManifest.ChunkData> ValidateSteam3FileChecksums(FileStream fs, DepotManifest.ChunkData[] chunkdata)
         {
             var neededChunks = new List<DepotManifest.ChunkData>();
+            ulong fileLength = (ulong)fs.Length;
 
             foreach (var data in chunkdata)
             {
+                if (data.Offset >= fileLength || data.Offset + data.UncompressedLength > fileLength)
+                {
+                    neededChunks.Add(data);
+                    continue;
+                }
+
                 fs.Seek((long)data.Offset, SeekOrigin.Begin);
 
                 var adler = AdlerHash(fs, (int)data.UncompressedLength);
