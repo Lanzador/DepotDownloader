@@ -1149,11 +1149,11 @@ namespace DepotDownloader
             {
                 ulong neededBytes = (ulong)neededChunks.Select(x => (long)x.UncompressedLength).Sum();
                 ulong neededBytesCompressed = (ulong)neededChunks.Select(x => (long)x.CompressedLength).Sum();
-                Console.WriteLine(" {0} {1}\n   - Chunks: {2}/{3} Bytes: {4} Compressed: {5}",
-                    fileDidExist ? "*" : "!", fileFinalPath, neededChunks.Count, file.Chunks.Count, neededBytes, neededBytesCompressed);
 
                 lock (validateCounter)
                 {
+                    Console.WriteLine(" {0} {1}", fileDidExist ? "*" : "!", fileFinalPath);
+                    Console.WriteLine("   - Chunks: {0}/{1} Bytes: {2} Compressed: {3}", neededChunks.Count, file.Chunks.Count, neededBytes, neededBytesCompressed);
                     validateCounter.depotFiles += 1;
                     validateCounter.totalFiles += 1;
                     validateCounter.depotChunks += (ulong)neededChunks.Count;
