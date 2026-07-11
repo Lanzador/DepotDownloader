@@ -1026,7 +1026,7 @@ namespace DepotDownloader
             }
             else
             {
-                Console.WriteLine("Validating depot {1}", depot.DepotId);
+                Console.WriteLine("Validating depot {0}", depot.DepotId);
             }
 
             var files = depotFilesData.filteredFiles.Where(f => !f.Flags.HasFlag(EDepotFileFlag.Directory)).ToArray();
