@@ -1063,7 +1063,7 @@ namespace DepotDownloader
                 validateCounter.depotCompressed = 0;
                 Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
                     depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed,  tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
-                return
+                return;
             }
 
             await Parallel.ForEachAsync(networkChunkQueue, parallelOptions, async (q, cancellationToken) =>
@@ -1143,8 +1143,8 @@ namespace DepotDownloader
 
             if (neededChunks.Count > 0)
             {
-                ulong neededBytes = (ulong)neededChunks.Select(x => (long)x.UncompressedLength).Sum()
-                ulong neededBytesCompressed = (ulong)neededChunks.Select(x => (long)x.CompressedLength).Sum()
+                ulong neededBytes = (ulong)neededChunks.Select(x => (long)x.UncompressedLength).Sum();
+                ulong neededBytesCompressed = (ulong)neededChunks.Select(x => (long)x.CompressedLength).Sum();
                 Console.WriteLine(" {0} {1}", fileDidExist ? "*" : "!", fileFinalPath);
                 Console.WriteLine("   - Chunks: {0}/{1} Bytes: {2} Compressed: {3}", neededChunks.Count, file.Chunks.Count, neededBytes, neededBytesCompressed);
 

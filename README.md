@@ -19,7 +19,7 @@ AppID;KEY
 
 - Use `-depot-exists` to avoid checking if a depot exists. Bypasses app token (must specify manifest ID manually) and allows downloading workshop items by depot ID + manifest ID
 
-- Use `-only-validate` to check file integrity without modifying them
+- Use `-only-validate` to check file integrity without modifying them (counts missing/incorrect chunks and their size)
 
 
 DepotDownloader
