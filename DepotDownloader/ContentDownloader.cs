@@ -729,9 +729,11 @@ namespace DepotDownloader
 
         private class OnlyValidateCounter
         {
+            public ulong depotFiles;
             public ulong depotChunks;
             public ulong depotBytes;
             public ulong depotCompressed;
+            public ulong totalFiles;
             public ulong totalChunks;
             public ulong totalBytes;
             public ulong totalCompressed;
@@ -795,7 +797,7 @@ namespace DepotDownloader
 
             if (Lanzador.OnlyValidate)
             {
-                Console.WriteLine("Total for all depots: {0} chunks, {1} bytes, {2} compressed", validateCounter.totalChunks, validateCounter.totalBytes, validateCounter.totalCompressed);
+                Console.WriteLine("Total for all depots: {0} files, {1} chunks, {2} bytes, {3} compressed", validateCounter.totalFiles, validateCounter.totalChunks, validateCounter.totalBytes, validateCounter.totalCompressed);
             }
 
             Console.WriteLine("Total downloaded: {0} bytes ({1} bytes uncompressed) from {2} depots in {3:00}:{4:00}:{5:00}.{6:000}",
@@ -1058,7 +1060,8 @@ namespace DepotDownloader
             {
                 depotCounter.depotDownloadTime.Stop();
                 tsdepot = depotCounter.depotDownloadTime.Elapsed;
-                Console.WriteLine("Total for this depot: {0} chunks, {1} bytes, {2} compressed", validateCounter.depotChunks, validateCounter.depotBytes, validateCounter.depotCompressed);
+                Console.WriteLine("Total for this depot: {0} files, {1} chunks, {2} bytes, {3} compressed", validateCounter.depotFiles, validateCounter.depotChunks, validateCounter.depotBytes, validateCounter.depotCompressed);
+                validateCounter.depotFiles = 0;
                 validateCounter.depotChunks = 0;
                 validateCounter.depotBytes = 0;
                 validateCounter.depotCompressed = 0;
@@ -1151,6 +1154,8 @@ namespace DepotDownloader
 
                 lock (validateCounter)
                 {
+                    validateCounter.depotFiles += 1;
+                    validateCounter.totalFiles += 1;
                     validateCounter.depotChunks += (ulong)neededChunks.Count;
                     validateCounter.totalChunks += (ulong)neededChunks.Count;
                     validateCounter.depotBytes += neededBytes;
