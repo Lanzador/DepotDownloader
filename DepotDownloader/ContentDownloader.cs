@@ -1038,6 +1038,7 @@ namespace DepotDownloader
                 CancellationToken = cts.Token
             };
 
+            TimeSpan tsdepot;
             depotCounter.depotDownloadTime.Start();
 
             await Parallel.ForEachAsync(files, parallelOptions, async (file, cancellationToken) =>
@@ -1056,7 +1057,7 @@ namespace DepotDownloader
             if (Lanzador.OnlyValidate)
             {
                 depotCounter.depotDownloadTime.Stop();
-                TimeSpan tsdepot = depotCounter.depotDownloadTime.Elapsed;
+                tsdepot = depotCounter.depotDownloadTime.Elapsed;
                 Console.WriteLine("Total for this depot: {0} chunks, {1} bytes, {2} compressed", validateCounter.depotChunks, validateCounter.depotBytes, validateCounter.depotCompressed);
                 validateCounter.depotChunks = 0;
                 validateCounter.depotBytes = 0;
@@ -1107,7 +1108,7 @@ namespace DepotDownloader
             DepotConfigStore.Save();
 
             depotCounter.depotDownloadTime.Stop();
-            TimeSpan tsdepot = depotCounter.depotDownloadTime.Elapsed;
+            tsdepot = depotCounter.depotDownloadTime.Elapsed;
             Console.WriteLine("Depot {0} - Downloaded {1} bytes ({2} bytes uncompressed) in {3:00}:{4:00}:{5:00}.{6:000}",
                 depot.DepotId, depotCounter.depotBytesCompressed, depotCounter.depotBytesUncompressed,  tsdepot.Hours, tsdepot.Minutes, tsdepot.Seconds, tsdepot.Milliseconds);
         }
